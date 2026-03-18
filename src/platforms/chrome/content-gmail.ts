@@ -11,81 +11,77 @@ import type { EmailMetadata, ExtractedLink } from "../../core/types";
 
 const LOG_PREFIX = "[iris]";
 
+/** Identified email ID with its source, so we can construct the right URL */
+interface EmailId {
+  /** The raw ID value */
+  id: string;
+  /** Where we got it from - determines URL parameter format */
+  source: "url-hash" | "data-message-id" | "row-attribute" | "row-link" | "display-container";
+}
+
 /**
- * Extract the Gmail thread ID for the currently displayed email.
- * Tries multiple strategies, prioritizing the ACTIVE/DISPLAYED email
- * (not just the first thread ID found in the DOM).
+ * Extract the Gmail thread/message ID for the currently displayed email.
+ * Tries multiple strategies, prioritizing the ACTIVE/DISPLAYED email.
  */
-function getThreadId(): string | null {
+function getEmailId(): EmailId | null {
   // Strategy 1: URL hash (full email view: #inbox/19cfd44438459c06)
   const hash = window.location.hash;
   const hashMatch = hash.match(/\/([a-f0-9]{16,})$/i);
   if (hashMatch?.[1]) {
     console.log(LOG_PREFIX, "Thread ID from URL hash:", hashMatch[1]);
-    return hashMatch[1];
+    return { id: hashMatch[1], source: "url-hash" };
   }
 
   // Strategy 2: Find data-message-id within the VISIBLE email content area
-  // In preview pane mode, the displayed email is in a container with the message body.
-  // We look for data-message-id on elements that are inside the email display area,
-  // not in the email list rows.
   const emailDisplaySelectors = [
-    ".adn [data-message-id]",             // Email display container
-    ".aeJ [data-message-id]",             // Alternative display container
-    ".h7 [data-message-id]",              // Message header area
-    "[data-message-id]",                   // Fallback: any message element
+    ".adn [data-message-id]",
+    ".aeJ [data-message-id]",
+    ".h7 [data-message-id]",
+    "[data-message-id]",
   ];
 
   for (const selector of emailDisplaySelectors) {
-    // Get ALL matches and use the LAST one (most recently rendered = currently displayed)
     const elements = document.querySelectorAll(selector);
     if (elements.length > 0) {
       const lastEl = elements[elements.length - 1]!;
       const msgId = lastEl.getAttribute("data-message-id");
       if (msgId) {
-        const cleanId = msgId.replace(/^#msg-f:/, "");
-        console.log(LOG_PREFIX, `Message ID from "${selector}" (${elements.length} matches, using last):`, cleanId);
-        return cleanId;
+        // Keep the raw value - e.g. "#msg-f:1849504883267" - we'll format it per-URL
+        console.log(LOG_PREFIX, `Message ID from "${selector}" (${elements.length} matches, using last):`, msgId);
+        return { id: msgId, source: "data-message-id" };
       }
     }
   }
 
   // Strategy 3: Find thread ID from the currently SELECTED row in the email list
-  // Gmail marks the active/selected row with specific classes
   const selectedRowSelectors = [
-    "tr.x7",          // Selected row in classic view
-    "tr.aqo",         // Active/focused row
-    "tr[tabindex='0']", // Row with keyboard focus
-    "tr.btb",         // Blue-highlighted selected row
+    "tr.x7", "tr.aqo", "tr[tabindex='0']", "tr.btb",
   ];
 
   for (const selector of selectedRowSelectors) {
     const row = document.querySelector(selector) as HTMLElement | null;
     if (!row) continue;
 
-    // Check for data-thread-id on the row itself
     const threadId = row.getAttribute("data-thread-id")
       ?? row.getAttribute("data-thread-perm-id")
       ?? row.getAttribute("data-legacy-thread-id");
     if (threadId) {
       console.log(LOG_PREFIX, "Thread ID from selected row attribute:", threadId);
-      return threadId;
+      return { id: threadId, source: "row-attribute" };
     }
 
-    // Check links within the selected row
     const rowLinks = row.querySelectorAll("a[href]");
     for (const link of rowLinks) {
       const href = link.getAttribute("href") ?? "";
       const idMatch = href.match(/#[^/]+\/([a-f0-9]{16,})$/i);
       if (idMatch?.[1]) {
         console.log(LOG_PREFIX, "Thread ID from selected row link:", idMatch[1]);
-        return idMatch[1];
+        return { id: idMatch[1], source: "row-link" };
       }
     }
   }
 
-  // Strategy 4: Look for data-thread-perm-id within the email display (not list)
-  // Scope to the preview pane / email view area
+  // Strategy 4: Look for data-thread-perm-id within the email display
   const displayContainers = document.querySelectorAll(".adn, .aeJ, [role='main']");
   for (const container of displayContainers) {
     const threadEl = container.querySelector("[data-thread-perm-id], [data-legacy-thread-id]");
@@ -94,12 +90,76 @@ function getThreadId(): string | null {
         ?? threadEl.getAttribute("data-legacy-thread-id");
       if (id) {
         console.log(LOG_PREFIX, "Thread ID from display container:", id);
-        return id;
+        return { id: id, source: "display-container" };
       }
     }
   }
 
-  console.warn(LOG_PREFIX, "Could not find thread ID. URL hash:", hash);
+  console.warn(LOG_PREFIX, "Could not find email ID. URL hash:", hash);
+  return null;
+}
+
+/** Extract Gmail's session key (ik parameter) from the page.
+ *  Gmail embeds this in GLOBALS or in existing AJAX URLs on the page. */
+function getGmailIk(): string | null {
+  // Method 1: Look for ik= in any script or link on the page
+  const scripts = document.querySelectorAll("script");
+  for (const script of scripts) {
+    const text = script.textContent ?? "";
+    // Gmail stores it in GLOBALS array or as a variable
+    const ikMatch = text.match(/\bik\s*[=:]\s*["']([a-f0-9]{10,})["']/i)
+      ?? text.match(/GLOBALS\[9\]\s*=\s*["']([a-f0-9]+)["']/i);
+    if (ikMatch?.[1]) {
+      console.log(LOG_PREFIX, "Gmail ik from script:", ikMatch[1]);
+      return ikMatch[1];
+    }
+  }
+
+  // Method 2: Look for ik= in existing links/forms on the page
+  const links = document.querySelectorAll("a[href*='ik='], form[action*='ik=']");
+  for (const el of links) {
+    const url = el.getAttribute("href") ?? el.getAttribute("action") ?? "";
+    const match = url.match(/[?&]ik=([a-f0-9]+)/i);
+    if (match?.[1]) {
+      console.log(LOG_PREFIX, "Gmail ik from link:", match[1]);
+      return match[1];
+    }
+  }
+
+  // Method 3: Check the page URL itself
+  const urlMatch = window.location.href.match(/[?&]ik=([a-f0-9]+)/i);
+  if (urlMatch?.[1]) return urlMatch[1];
+
+  return null;
+}
+
+/** Try to extract a hex thread ID from the selected email row or URL.
+ *  In preview pane mode, the URL hash doesn't contain the thread ID,
+ *  but the selected row's link href does. */
+function getThreadHexId(): string | null {
+  // Check URL hash first
+  const hashMatch = window.location.hash.match(/\/([a-f0-9]{16,})$/i);
+  if (hashMatch?.[1]) return hashMatch[1];
+
+  // In preview pane, find the selected/active row and extract thread ID from its link
+  const selectedRows = document.querySelectorAll("tr.x7, tr.aqo, tr[tabindex='0'], tr.btb, tr.zA.yO");
+  for (const row of selectedRows) {
+    const links = row.querySelectorAll("a[href]");
+    for (const link of links) {
+      const href = link.getAttribute("href") ?? "";
+      const idMatch = href.match(/#[^/]+\/([a-f0-9]{16,})$/i);
+      if (idMatch?.[1]) {
+        console.log(LOG_PREFIX, "Thread hex ID from selected row:", idMatch[1]);
+        return idMatch[1];
+      }
+    }
+    // Also check data attributes
+    const threadId = row.getAttribute("data-thread-id") ?? row.getAttribute("data-legacy-thread-id");
+    if (threadId && /^[a-f0-9]{16,}$/i.test(threadId)) {
+      return threadId;
+    }
+  }
+
   return null;
 }
 
@@ -107,41 +167,72 @@ function getThreadId(): string | null {
  *  Unlike view=att (which redirects to googleusercontent.com and hits CORS),
  *  view=om stays on mail.google.com - same-origin, no CORS issues.
  *  Returns null if it fails - caller should fall back to DOM parsing. */
-async function tryFetchEml(threadId: string): Promise<string | null> {
-  // view=om returns the "Show Original" page with raw email content
-  // It stays on mail.google.com (same-origin) unlike view=att
-  const url = `/mail/u/0/?view=om&permmsgid=${threadId}`;
-  console.log(LOG_PREFIX, "Fetching email source via view=om:", url);
+async function tryFetchEml(emailId: EmailId): Promise<string | null> {
+  // Build candidate URLs based on ID source
+  const urls: string[] = [];
 
-  try {
-    const response = await fetch(url, { credentials: "same-origin" });
-    if (!response.ok) {
-      console.log(LOG_PREFIX, "view=om fetch failed:", response.status);
-      return null;
+  const threadHexId = getThreadHexId();
+  const ik = getGmailIk();
+  const ikParam = ik ? `&ik=${ik}` : "";
+  console.log(LOG_PREFIX, "Gmail ik:", ik ?? "not found", "threadHexId:", threadHexId ?? "not found");
+
+  if (emailId.source === "url-hash" || emailId.source === "row-link") {
+    urls.push(`/mail/u/0/?view=om${ikParam}&th=${emailId.id}`);
+  } else if (emailId.source === "data-message-id") {
+    const permMsgId = emailId.id.replace(/^#/, "");
+    if (threadHexId) {
+      urls.push(`/mail/u/0/?view=om${ikParam}&th=${threadHexId}&permmsgid=${permMsgId}`);
+      urls.push(`/mail/u/0/?view=om${ikParam}&th=${threadHexId}`);
     }
-
-    const html = await response.text();
-
-    // view=om returns an HTML page with the raw email in a <pre> or <div> element
-    // Extract the raw email text from the HTML wrapper
-    const rawEmail = extractRawEmailFromShowOriginal(html);
-    if (rawEmail && rawEmail.length > 100) {
-      console.log(LOG_PREFIX, "Got raw email via view=om, length:", rawEmail.length);
-      return rawEmail;
+    urls.push(`/mail/u/0/?view=om${ikParam}&permmsgid=${permMsgId}`);
+    const numericMatch = emailId.id.match(/(\d{10,})/);
+    if (numericMatch) {
+      const hexId = BigInt(numericMatch[1]).toString(16);
+      urls.push(`/mail/u/0/?view=om${ikParam}&th=${hexId}`);
     }
-
-    // If the HTML doesn't contain recognizable email content, it might be the raw text itself
-    if (html.includes("From:") && html.includes("Date:") && html.length > 200) {
-      console.log(LOG_PREFIX, "view=om returned raw text directly, length:", html.length);
-      return html;
+  } else {
+    urls.push(`/mail/u/0/?view=om${ikParam}&th=${emailId.id}`);
+    if (threadHexId && threadHexId !== emailId.id) {
+      urls.push(`/mail/u/0/?view=om${ikParam}&th=${threadHexId}`);
     }
-
-    console.log(LOG_PREFIX, "view=om response didn't contain email data, length:", html.length);
-    return null;
-  } catch (err) {
-    console.log(LOG_PREFIX, "view=om fetch error:", err instanceof Error ? err.message : String(err));
-    return null;
+    urls.push(`/mail/u/0/?view=om${ikParam}&permmsgid=${emailId.id}`);
   }
+
+  for (const url of urls) {
+    console.log(LOG_PREFIX, "Trying view=om URL:", url);
+    try {
+      // Gmail requires X-Same-Domain header for internal AJAX requests
+      const response = await fetch(url, {
+        credentials: "include",
+        headers: { "X-Same-Domain": "1" },
+      });
+      if (!response.ok) {
+        console.log(LOG_PREFIX, "view=om fetch failed:", response.status, url);
+        continue;
+      }
+
+      const html = await response.text();
+
+      // Extract the raw email from the HTML wrapper
+      const rawEmail = extractRawEmailFromShowOriginal(html);
+      if (rawEmail && rawEmail.length > 100) {
+        console.log(LOG_PREFIX, "Got raw email via view=om, length:", rawEmail.length);
+        return rawEmail;
+      }
+
+      // Maybe the response is raw text directly
+      if (html.includes("From:") && html.includes("Date:") && html.length > 200) {
+        console.log(LOG_PREFIX, "view=om returned raw text directly, length:", html.length);
+        return html;
+      }
+
+      console.log(LOG_PREFIX, "view=om response didn't contain email data, length:", html.length);
+    } catch (err) {
+      console.log(LOG_PREFIX, "view=om fetch error:", err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  return null;
 }
 
 /** Extract raw email text from Gmail's "Show Original" HTML page */
@@ -324,9 +415,9 @@ function extractBodyTextFromDom(): string {
 }
 
 /** Run the full analysis pipeline - tries .eml first, falls back to DOM parsing */
-async function analyzeEmail(threadId: string) {
+async function analyzeEmail(emailId: EmailId) {
   // Try .eml fetch first (gives us full headers including auth)
-  const emlContent = await tryFetchEml(threadId);
+  const emlContent = await tryFetchEml(emailId);
 
   if (emlContent && emlContent.length > 100) {
     console.log(LOG_PREFIX, "Using .eml-based analysis (full headers available)");
@@ -439,13 +530,13 @@ async function handleCheck(): Promise<void> {
   }
 
   try {
-    const threadId = getThreadId();
-    if (!threadId) {
+    const emailId = getEmailId();
+    if (!emailId) {
       showError("Could not identify the current email. Try opening it in full view.");
       return;
     }
 
-    const result = await analyzeEmail(threadId);
+    const result = await analyzeEmail(emailId);
 
     // Build result card as DOM element (no innerHTML, CSP-safe)
     const cardElement = createResultCardElement(result);
