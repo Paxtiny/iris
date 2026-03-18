@@ -1,0 +1,30 @@
+Delivered-To: user@gmail.com
+Received: from mail.mailchimp.com (mail.mailchimp.com. [205.201.128.10])
+        by mx.google.com with ESMTP id abc789
+        for <user@gmail.com>;
+        Sun, 15 Mar 2026 10:00:05 -0500 (CDT)
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@mail.some-startup.io header.s=k1;
+       spf=pass (google.com: domain of bounce-123@mail.some-startup.io designates 205.201.128.10 as permitted sender) smtp.mailfrom=bounce-123@mail.some-startup.io;
+       dmarc=pass (p=NONE dis=NONE) header.from=some-startup.io
+Return-Path: <bounce-123@mail.some-startup.io>
+MIME-Version: 1.0
+Date: Sun, 15 Mar 2026 10:00:04 -0500
+Reply-To: newsletter@some-startup.io
+Message-ID: <campaign-abc-789@mail.some-startup.io>
+Subject: Don't miss out! Limited time offer expires today
+From: Some Startup <newsletter@some-startup.io>
+To: user@gmail.com
+Content-Type: text/html; charset="UTF-8"
+
+<html>
+<body>
+<p>Hi there!</p>
+<p>This is your last chance to get our premium plan at 50% off.</p>
+<p>This offer expires today at midnight. Act now before it's gone!</p>
+<p><a href="https://some-startup.io/pricing">Upgrade now</a></p>
+<p><a href="https://tracking.mailchimp.com/click/abc123">Read more on our blog</a></p>
+<p>Best regards,<br>The Some Startup Team</p>
+<p><a href="https://some-startup.io/unsubscribe?id=xyz">Unsubscribe</a></p>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "name": "nicodaimus-iris",
+  "version": "0.1.0",
+  "description": "nicodAImus iris - privacy-first email phishing detection browser extension",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:chrome": "node build.mjs --target chrome",
+    "build:firefox": "node build.mjs --target firefox",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/ tests/",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.79.0",
+    "@types/chrome": "^0.1.38",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Paxtiny/iris.git"
+  },
+  "author": "nicodAImus",
+  "keywords": [
+    "phishing",
+    "email",
+    "security",
+    "browser-extension",
+    "privacy"
+  ]
+}

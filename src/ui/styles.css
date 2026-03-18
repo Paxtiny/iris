@@ -1,0 +1,210 @@
+/* nicodAImus iris - Styles */
+
+/* Toolbar button injected into Gmail */
+.iris-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  margin-left: 8px;
+  border-radius: 16px;
+  background: #1a1a2e;
+  color: #e0e0ff;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s, transform 0.1s;
+  border: 1px solid #2a2a4e;
+}
+
+.iris-toolbar-button:hover {
+  background: #2a2a4e;
+  transform: scale(1.02);
+}
+
+.iris-toolbar-button.iris-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Result card displayed inline in Gmail */
+.iris-card {
+  margin: 8px 0 16px 0;
+  padding: 16px 20px;
+  border-radius: 8px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.iris-card-safe {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+}
+
+.iris-card-uncertain {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+}
+
+.iris-card-dangerous {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+}
+
+.iris-card-error {
+  background: #f8f8f8;
+  border: 1px solid #d4d4d4;
+  color: #666;
+}
+
+/* Score badge */
+.iris-score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.iris-score-safe {
+  background: #22c55e;
+}
+
+.iris-score-uncertain {
+  background: #f59e0b;
+}
+
+.iris-score-dangerous {
+  background: #ef4444;
+}
+
+/* Card layout */
+.iris-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.iris-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.iris-card-explanation {
+  color: #444;
+  margin: 8px 0;
+}
+
+.iris-card-signals {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+  color: #666;
+}
+
+.iris-card-signals ul {
+  margin: 4px 0 0 0;
+  padding-left: 20px;
+}
+
+.iris-card-signals li {
+  margin-bottom: 2px;
+}
+
+.iris-card-toggle {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+
+.iris-card-footer {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #999;
+  text-align: right;
+}
+
+/* Popup styles */
+.iris-popup {
+  width: 320px;
+  padding: 16px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.iris-popup-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.iris-logo {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  letter-spacing: 0.5px;
+}
+
+.iris-brand {
+  font-size: 12px;
+  color: #999;
+}
+
+.iris-popup-body {
+  text-align: center;
+}
+
+.iris-popup-hint {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.iris-btn {
+  background: #1a1a2e;
+  color: #e0e0ff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.iris-btn:hover {
+  background: #2a2a4e;
+}
+
+.iris-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iris-error {
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.iris-popup-result {
+  margin-top: 12px;
+}

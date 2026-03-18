@@ -1,0 +1,31 @@
+Delivered-To: victim@gmail.com
+Received: from unknown-server.xyz (unknown-server.xyz. [185.234.72.11])
+        by mx.google.com with ESMTP id xyz123
+        for <victim@gmail.com>;
+        Mon, 16 Mar 2026 08:15:22 -0400 (EDT)
+Authentication-Results: mx.google.com;
+       dkim=fail header.i=@paypa1-secure.xyz;
+       spf=fail (google.com: domain of noreply@paypa1-secure.xyz does not designate 185.234.72.11 as permitted sender) smtp.mailfrom=noreply@paypa1-secure.xyz;
+       dmarc=fail (p=NONE dis=NONE) header.from=paypa1-secure.xyz
+Return-Path: <noreply@paypa1-secure.xyz>
+MIME-Version: 1.0
+Date: Mon, 16 Mar 2026 08:15:21 -0400
+Reply-To: security-team@paypa1-verify.com
+Message-ID: <fake-id-123456@paypa1-secure.xyz>
+Subject: URGENT: Your PayPal account has been suspended - Verify immediately
+From: PayPal Security <security@paypa1-secure.xyz>
+To: victim@gmail.com
+Content-Type: text/html; charset="UTF-8"
+
+<html>
+<body>
+<p>Dear Customer,</p>
+<p><strong>Your PayPal account has been suspended</strong> due to suspicious activity detected on your account.</p>
+<p>You must verify your identity within 24 hours or your account will be permanently closed.</p>
+<p><a href="https://paypa1-secure.xyz/verify-account">Click here to verify your account now</a></p>
+<p>Please confirm your identity by entering your password and payment details.</p>
+<p>If you do not respond within 24 hours, your account access will be revoked.</p>
+<p>PayPal Security Team</p>
+<p><a href="https://paypa1-secure.xyz/login">Sign in to secure your account</a></p>
+</body>
+</html>
