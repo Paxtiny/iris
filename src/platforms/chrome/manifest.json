@@ -5,7 +5,8 @@
   "description": "Privacy-first email phishing detection. Scores emails 0-10 for phishing risk, entirely in your browser.",
   "permissions": [],
   "host_permissions": [
-    "https://mail.google.com/*"
+    "https://mail.google.com/*",
+    "https://mail-attachment.googleusercontent.com/*"
   ],
   "content_scripts": [
     {
@@ -16,8 +17,7 @@
     }
   ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",

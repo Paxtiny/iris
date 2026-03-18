@@ -39,6 +39,8 @@
   font-size: 14px;
   line-height: 1.5;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 100;
 }
 
 .iris-card-safe {
@@ -125,13 +127,24 @@
 }
 
 .iris-card-toggle {
-  background: none;
-  border: none;
   color: #666;
   cursor: pointer;
   font-size: 12px;
   padding: 4px 0;
-  text-decoration: underline;
+  list-style: none;
+}
+
+.iris-card-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.iris-card-toggle::before {
+  content: "\25B6  ";
+  font-size: 10px;
+}
+
+details.iris-card-signals[open] > .iris-card-toggle::before {
+  content: "\25BC  ";
 }
 
 .iris-card-footer {

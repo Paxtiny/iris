@@ -57,5 +57,11 @@ for (const target of targets) {
   // Copy styles
   cpSync("src/ui/styles.css", `${outdir}/styles.css`);
 
+  // Copy icons
+  const iconsSrc = "src/icons";
+  if (existsSync(iconsSrc)) {
+    cpSync(iconsSrc, `${outdir}/icons`, { recursive: true });
+  }
+
   console.log(`Built ${target} extension -> ${outdir}/`);
 }

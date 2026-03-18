@@ -7,40 +7,54 @@ import type {
 } from "./types";
 import { hasSuspiciousTld } from "./domainAnalyzer";
 
+/** Options for scoring */
+export interface ScoreOptions {
+  /** When true, skip DKIM/SPF/DMARC checks (e.g., DOM-only mode where headers are unavailable) */
+  skipAuth?: boolean;
+}
+
 /** Score an email for phishing risk based on analyzed signals */
 export function scoreEmail(
   metadata: EmailMetadata,
   domains: DomainAnalysis,
-  urgency: UrgencyAnalysis
+  urgency: UrgencyAnalysis,
+  options?: ScoreOptions
 ): ScoringResult {
   const signals: ScoringSignal[] = [];
   let rawScore = 0;
+  const skipAuth = options?.skipAuth ?? false;
 
-  // DKIM check (+3 for fail/missing)
-  if (metadata.dkim === "fail") {
-    signals.push({ name: "dkim_fail", points: 3, detail: "DKIM signature failed verification" });
-    rawScore += 3;
-  } else if (metadata.dkim === "none") {
-    signals.push({ name: "dkim_none", points: 2, detail: "No DKIM signature present" });
-    rawScore += 2;
+  if (skipAuth) {
+    signals.push({ name: "auth_skipped", points: 0, detail: "Email authentication (DKIM/SPF/DMARC) not available in browser-only mode" });
   }
 
-  // SPF check (+2 for fail/missing)
-  if (metadata.spf === "fail") {
-    signals.push({ name: "spf_fail", points: 2, detail: "SPF check failed - sender IP not authorized" });
-    rawScore += 2;
-  } else if (metadata.spf === "none") {
-    signals.push({ name: "spf_none", points: 1, detail: "No SPF record found" });
-    rawScore += 1;
-  }
+  if (!skipAuth) {
+    // DKIM check (+3 for fail/missing)
+    if (metadata.dkim === "fail") {
+      signals.push({ name: "dkim_fail", points: 3, detail: "DKIM signature failed verification" });
+      rawScore += 3;
+    } else if (metadata.dkim === "none") {
+      signals.push({ name: "dkim_none", points: 2, detail: "No DKIM signature present" });
+      rawScore += 2;
+    }
 
-  // DMARC check (+2 for fail/missing)
-  if (metadata.dmarc === "fail") {
-    signals.push({ name: "dmarc_fail", points: 2, detail: "DMARC policy violated" });
-    rawScore += 2;
-  } else if (metadata.dmarc === "none") {
-    signals.push({ name: "dmarc_none", points: 1, detail: "No DMARC policy found" });
-    rawScore += 1;
+    // SPF check (+2 for fail/missing)
+    if (metadata.spf === "fail") {
+      signals.push({ name: "spf_fail", points: 2, detail: "SPF check failed - sender IP not authorized" });
+      rawScore += 2;
+    } else if (metadata.spf === "none") {
+      signals.push({ name: "spf_none", points: 1, detail: "No SPF record found" });
+      rawScore += 1;
+    }
+
+    // DMARC check (+2 for fail/missing)
+    if (metadata.dmarc === "fail") {
+      signals.push({ name: "dmarc_fail", points: 2, detail: "DMARC policy violated" });
+      rawScore += 2;
+    } else if (metadata.dmarc === "none") {
+      signals.push({ name: "dmarc_none", points: 1, detail: "No DMARC policy found" });
+      rawScore += 1;
+    }
   }
 
   // Reply-To mismatch (+2)
@@ -107,7 +121,9 @@ export function scoreEmail(
   }
 
   // Legitimacy bonus (-3 when all auth passes and domains match)
+  // In skipAuth mode, give a smaller bonus (-1) when domains are clean
   if (
+    !skipAuth &&
     metadata.dkim === "pass" &&
     metadata.spf === "pass" &&
     metadata.dmarc === "pass" &&
@@ -121,6 +137,18 @@ export function scoreEmail(
       detail: "All authentication checks passed and domains are consistent",
     });
     rawScore -= 3;
+  } else if (
+    skipAuth &&
+    !domains.replyToMismatch &&
+    domains.homoglyphs.length === 0 &&
+    domains.linkDomainMismatches.length === 0
+  ) {
+    signals.push({
+      name: "domains_clean",
+      points: -1,
+      detail: "All visible domains are consistent (auth headers not available)",
+    });
+    rawScore -= 1;
   }
 
   // Clamp to 0-10
@@ -129,7 +157,7 @@ export function scoreEmail(
   const level =
     score <= 2 ? "safe" : score <= 5 ? "uncertain" : "dangerous";
 
-  const explanation = generateExplanation(metadata, domains, urgency, score, level);
+  const explanation = generateExplanation(metadata, domains, urgency, score, level, skipAuth);
 
   return { score, level, signals, explanation };
 }
@@ -140,14 +168,21 @@ function generateExplanation(
   domains: DomainAnalysis,
   urgency: UrgencyAnalysis,
   _score: number,
-  level: "safe" | "uncertain" | "dangerous"
+  level: "safe" | "uncertain" | "dangerous",
+  skipAuth = false
 ): string {
   const parts: string[] = [];
 
   if (level === "safe") {
-    parts.push(
-      `This email from ${domains.senderDomain} passes all authentication checks (DKIM, SPF, DMARC).`
-    );
+    if (skipAuth) {
+      parts.push(
+        `This email from ${domains.senderDomain} has no suspicious signals in the visible content.`
+      );
+    } else {
+      parts.push(
+        `This email from ${domains.senderDomain} passes all authentication checks (DKIM, SPF, DMARC).`
+      );
+    }
     if (domains.linkDomainMismatches.length === 0) {
       parts.push("All links point to the expected domain.");
     }
