@@ -200,6 +200,12 @@ html, body {
   font-size: 11px;
   color: #999;
   line-height: 1.2;
+  text-decoration: none;
+}
+
+.iris-brand:hover {
+  color: #666;
+  text-decoration: underline;
 }
 
 .iris-popup-body {

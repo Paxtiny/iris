@@ -14,11 +14,17 @@ When you click the "iris" button on an email:
 
 ## What data iris sends
 
-**Nothing.** In the current version, all analysis happens locally in your browser. No data is sent to any server - not to nicodAImus, not to Google, not to anyone.
+**Nothing from the extension itself.** All analysis happens locally in your browser. No data is sent to any server automatically.
 
 You can verify this yourself:
 - The source code is open on GitHub
-- Open your browser's DevTools Network tab while using iris - you will see zero outgoing requests
+- Open your browser's DevTools Network tab while using iris - you will see zero outgoing requests from the extension
+
+## Developer attribution link
+
+The iris panel displays a "by nicodAImus" link in the header. If you click it, your browser navigates to [nicodaimus.com](https://nicodaimus.com). That website uses [Plausible Analytics](https://plausible.io) (privacy-first, no cookies, no fingerprinting, GDPR-compliant) which may record the page visit. The link includes a `utm_source=iris` parameter so the site can count how many visitors came from iris.
+
+This only happens if you actively click the link. The extension never makes this request on your behalf.
 
 ## What data iris stores
 
@@ -26,12 +32,12 @@ iris does not store any data. Each analysis is performed on-demand when you clic
 
 ## Permissions
 
-iris requires access to `mail.google.com` to:
-- Inject the check button into the Gmail toolbar
-- Read the email you want to analyze
-- Display the result card
+iris requires access to:
+- `mail.google.com` - to read the email you want to analyze (Gmail)
+- `mail.proton.me` - to read the email you want to analyze (Proton Mail)
+- `activeTab` - to connect the panel window to the tab you are currently viewing
 
-iris does not access any other websites.
+iris does not access any other websites automatically.
 
 ## Future versions
 
