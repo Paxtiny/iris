@@ -13,8 +13,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const metaDiv = document.getElementById("iris-email-meta");
   const bannerDiv = document.getElementById("iris-tab-banner");
   const hintDiv = document.querySelector(".iris-popup-hint");
+  const brandLink = document.querySelector<HTMLAnchorElement>(".iris-brand");
 
   if (!checkBtn || !resultDiv) return;
+
+  // target="_blank" can silently fail in extension panel windows; use chrome.tabs.create instead.
+  if (brandLink) {
+    brandLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: brandLink.href });
+    });
+  }
 
   // Read from URL params set by background.ts when opening the panel window.
   const params = new URLSearchParams(window.location.search);

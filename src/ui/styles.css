@@ -198,14 +198,16 @@ html, body {
 
 .iris-brand {
   font-size: 11px;
-  color: #999;
+  color: #888;
   line-height: 1.2;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: #ccc;
+  cursor: pointer;
 }
 
 .iris-brand:hover {
-  color: #666;
-  text-decoration: underline;
+  color: #555;
+  text-decoration-color: #888;
 }
 
 .iris-popup-body {
