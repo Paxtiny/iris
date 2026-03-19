@@ -6,7 +6,7 @@ nicodAImus iris analyzes emails for phishing risk directly in your browser.
 
 ## What data iris accesses
 
-When you click the "iris" button on an email:
+When you click the iris icon in your browser's extension toolbar and then click "Scan":
 
 1. iris reads the email headers (sender, authentication results, reply-to address)
 2. iris reads the links in the email body (domain names only)
