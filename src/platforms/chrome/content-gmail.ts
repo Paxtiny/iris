@@ -543,8 +543,12 @@ async function analyzeEmail(emailId: EmailId) {
     returnPath: null,
     returnPathDomain: null,
     messageId: null,
-    subject: (getDisplayedEmailContainer() ?? document).querySelector(".hP, h2.hP")?.textContent
-      ?? document.querySelector(".hP, h2.hP")?.textContent ?? "",
+    subject: (() => {
+      const c = getDisplayedEmailContainer();
+      const wrapper = c?.parentElement ?? c;
+      return (wrapper?.querySelector(".hP, h2.hP")
+        ?? document.querySelector("[role='main'] .hP, .nH .hP, .aeF .hP"))?.textContent ?? "";
+    })(),
     dkim: "none",
     dkimDomain: null,
     spf: "none",
@@ -593,8 +597,13 @@ async function handleCheck(): Promise<AnalysisResponse> {
     // Extract subject and sender scoped to the same container used during analysis,
     // so the metadata matches the email that was actually scored.
     const container = getDisplayedEmailContainer() ?? document;
-    const subject = (container.querySelector<HTMLElement>(".hP, h2.hP")
-      ?? document.querySelector<HTMLElement>(".hP, h2.hP"))?.innerText?.trim() ?? "";
+    // .hP (subject) lives in the thread header (.ha), which is a SIBLING of the message
+    // container (.adn), not inside it. Search container.parentElement (the thread wrapper
+    // that holds both .ha and .adn) before falling back to [role="main"] - never bare
+    // document.querySelector which grabs the first .hP in the inbox list instead.
+    const threadWrapper = (container as HTMLElement).parentElement ?? container;
+    const subject = (threadWrapper.querySelector<HTMLElement>(".hP, h2.hP")
+      ?? document.querySelector<HTMLElement>("[role='main'] .hP, .nH .hP, .aeF .hP"))?.innerText?.trim() ?? "";
     const from = (container.querySelector<HTMLElement>(".gD[email]")
       ?? document.querySelector<HTMLElement>(".gD[email]"))?.getAttribute("email") ?? "";
     return { html, subject, from };
