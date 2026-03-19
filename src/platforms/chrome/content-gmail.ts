@@ -5,7 +5,7 @@ import { parseEmailHeaders, parseAttachments } from "../../core/headerParser";
 import { analyzeDomains } from "../../core/domainAnalyzer";
 import { extractLinks } from "../../core/linkExtractor";
 import { detectUrgency } from "../../core/urgencyDetector";
-import { analyzeAttachments, emptyAttachmentAnalysis } from "../../core/attachmentAnalyzer";
+import { analyzeAttachments } from "../../core/attachmentAnalyzer";
 import { scoreEmail, type ScoreOptions } from "../../core/scorer";
 import { createResultCardElement } from "../../ui/components";
 import type { EmailMetadata, ExtractedLink } from "../../core/types";

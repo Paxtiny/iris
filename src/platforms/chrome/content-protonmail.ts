@@ -5,8 +5,8 @@
 import { parseEmailHeaders } from "../../core/headerParser";
 import { analyzeDomains } from "../../core/domainAnalyzer";
 import { detectUrgency } from "../../core/urgencyDetector";
-import { analyzeAttachments, emptyAttachmentAnalysis } from "../../core/attachmentAnalyzer";
-import { scoreEmail, type ScoreOptions } from "../../core/scorer";
+import { analyzeAttachments } from "../../core/attachmentAnalyzer";
+import { scoreEmail } from "../../core/scorer";
 import { createResultCardElement } from "../../ui/components";
 import type { EmailMetadata, ExtractedLink, AttachmentInfo } from "../../core/types";
 
@@ -336,7 +336,7 @@ async function analyzeEmail(): Promise<AnalysisResponse> {
     // The user can optionally trigger a header fetch via the button below.
     const sender = extractSender();
     if (!sender) {
-      return createErrorHtml("Could not identify the sender. Try opening the email in full view.");
+      return { html: createErrorHtml("Could not identify the sender. Try opening the email in full view.") };
     }
 
     // If the "sender" is a ProtonMail address and we're in a thread (multiple iframes),

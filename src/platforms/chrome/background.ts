@@ -54,7 +54,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 
   const win = await chrome.windows.create(createOptions);
-  panelWindowId = win.id ?? null;
+  panelWindowId = win?.id ?? null;
   console.log(LOG_PREFIX, "Opened iris panel window", panelWindowId);
 });
 

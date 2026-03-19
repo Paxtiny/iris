@@ -1,22 +1,27 @@
 # nicodAImus iris
 
-Privacy-first email phishing detection browser extension.
+Privacy-first email phishing detection browser extension for Gmail and Proton Mail.
 
 Scores emails 0-10 for phishing risk, entirely in your browser. No data leaves your machine.
 
 ## What it does
 
-Click the **iris** button in your Gmail toolbar to analyze any email:
+Click the **iris icon** in your browser's extension toolbar while viewing an email:
 
 - Checks email authentication (DKIM, SPF, DMARC)
 - Detects domain impersonation and homoglyph attacks (paypa1.com, amaz0n.com)
 - Identifies mismatched reply-to and link domains
-- Detects urgency language and credential requests
+- Detects urgency language and credential requests (EN/DE)
+- Thread-aware: skips your own sent messages, shows info card for reply threads
 - Explains the result in plain language
 
 **Score 0-2** (green) - Very likely legitimate
 **Score 3-5** (yellow) - Review carefully
 **Score 6-10** (red) - Very likely phishing
+
+### Proton Mail extras
+
+For Proton Mail, iris also offers an optional **Verify authentication** step that fetches the full raw headers on demand, letting you confirm DKIM/SPF/DMARC results from the actual message envelope rather than the DOM.
 
 ## Privacy
 
@@ -34,7 +39,7 @@ Verify yourself: open DevTools Network tab while using iris. You will see no out
 4. Enable "Developer mode" (top right)
 5. Click "Load unpacked"
 6. Select the `dist/chrome/` folder
-7. Open Gmail - you'll see the iris button in the email toolbar
+7. Open Gmail or Proton Mail and click the iris icon in the extension toolbar
 
 ### Firefox
 
@@ -43,17 +48,17 @@ Verify yourself: open DevTools Network tab while using iris. You will see no out
 3. Open `about:debugging#/runtime/this-firefox`
 4. Click "Load Temporary Add-on"
 5. Select `dist/firefox/manifest.json`
-6. Open Gmail - you'll see the iris button in the email toolbar
-
-### Alternative: browser toolbar icon
-
-If the toolbar button doesn't appear (Gmail DOM updates can affect injection), click the iris icon in your browser's extension toolbar for the same functionality.
+6. Open Gmail or Proton Mail and click the iris icon in the extension toolbar
 
 ## How it works
 
-iris fetches the raw email (.eml) from Gmail and analyzes it locally:
+iris opens a persistent side panel when you click its icon. The panel stays open while you browse your inbox.
 
-1. **Header parsing** - Extracts sender, reply-to, return-path, authentication results
+**Gmail:** iris fetches the raw `.eml` file from Gmail (background fetch to bypass CORS) and parses authentication headers, sender domains, and links locally. Falls back to DOM-based analysis if the fetch fails.
+
+**Proton Mail:** iris parses headers from the email's content iframes. The optional "Verify authentication" button fetches the full raw headers on demand.
+
+1. **Header parsing** - Extracts sender, reply-to, return-path, authentication results (DKIM/SPF/DMARC)
 2. **Domain analysis** - Compares claimed identity with actual domains, detects homoglyphs
 3. **Link extraction** - Checks if links go to the expected domains
 4. **Urgency detection** - Identifies pressure language (EN/DE) and credential requests
@@ -72,11 +77,11 @@ npm test
 # Run tests in watch mode
 npm run test:watch
 
-# Build for Chrome
-npm run build:chrome
-
 # Build for Firefox
-npm run build:firefox
+npm run build -- --target firefox
+
+# Build for Chrome
+npm run build -- --target chrome
 
 # Build for both
 npm run build
@@ -86,20 +91,27 @@ npm run build
 
 ```
 src/
-  core/           # Scoring engine (zero dependencies, platform-agnostic)
-    types.ts      # TypeScript interfaces
+  core/               # Scoring engine (zero dependencies, platform-agnostic)
+    types.ts
     headerParser.ts
     domainAnalyzer.ts
     linkExtractor.ts
     urgencyDetector.ts
+    attachmentAnalyzer.ts
     scorer.ts
+  data/               # Known legitimate domains list
   platforms/
-    chrome/       # Chrome extension (Manifest V3)
-    firefox/      # Firefox extension
-  ui/             # Shared UI components
+    chrome/           # Chrome extension (Manifest V3)
+      background.ts   # Service worker: panel window management, EML fetch
+      content-gmail.ts
+      content-protonmail.ts
+      popup.ts / popup.html
+    firefox/          # Firefox extension (same source, different manifest)
+  ui/                 # Shared UI components and styles
+  icons/              # Extension and panel icons
 tests/
-  core/           # Unit tests
-  fixtures/       # Sample .eml files
+  core/               # Unit tests (Vitest)
+  fixtures/           # Sample .eml files
 ```
 
 ## Contributing
