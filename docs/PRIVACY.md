@@ -47,6 +47,16 @@ Future versions may offer optional AI-powered deep analysis for ambiguous emails
 - No email body, subject text, or personal information will leave your browser
 - The privacy policy will be updated before any such change
 
+## Disclaimer and limitation of liability
+
+iris is a best-effort tool that estimates phishing risk based on heuristics: email authentication results (DKIM, SPF, DMARC), domain analysis, link inspection, and language patterns. It cannot guarantee detection of all phishing attempts.
+
+Sophisticated phishing emails - for example those that pass all authentication checks, use recently registered look-alike domains, or do not contain urgency language - may score as safe even if they are malicious. A low risk score is not a guarantee of safety.
+
+**nicodAImus accepts no liability for any security incident, financial loss, data breach, or other harm that results from an email iris did not flag as suspicious or dangerous.** iris is provided as-is, without warranty of any kind.
+
+iris is intended as one layer of awareness, not as a replacement for professional IT security measures, anti-malware software, or your own judgement. When in doubt, do not click links or open attachments.
+
 ## Contact
 
 Questions about privacy? Open an issue on the GitHub repository.
