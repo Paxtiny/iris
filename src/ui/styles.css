@@ -1,5 +1,18 @@
 /* nicodAImus iris - Styles */
 
+/* Brand tokens */
+:root {
+  --bg: #0b0b10;
+  --text: #e9eaee;
+  --muted: #9aa0a6;
+  --accent: #7c3aed;
+  --accent2: #8b5cf6;
+  --border: rgba(255, 255, 255, 0.06);
+  --success: #10b981;
+  --danger: #ef4444;
+  --glow: rgba(124, 58, 237, 0.3);
+}
+
 /* Result card displayed inline in Gmail */
 .iris-card {
   margin: 8px 0 16px 0;
@@ -8,36 +21,36 @@
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 100;
 }
 
 .iris-card-safe {
-  background: #f0fdf4;
-  border: 1px solid #86efac;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 .iris-card-uncertain {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .iris-card-dangerous {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .iris-card-error {
-  background: #f8f8f8;
-  border: 1px solid #d4d4d4;
-  color: #666;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  color: var(--muted);
 }
 
 .iris-card-info {
-  background: #eff6ff;
-  border: 1px solid #93c5fd;
-  color: #1e40af;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: #a78bfa;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -50,7 +63,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: var(--accent);
   color: white;
   font-weight: 700;
   font-size: 14px;
@@ -95,20 +108,20 @@
 .iris-card-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
 }
 
 .iris-card-explanation {
-  color: #444;
+  color: var(--muted);
   margin: 8px 0;
 }
 
 .iris-card-signals {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--border);
   font-size: 13px;
-  color: #666;
+  color: var(--muted);
 }
 
 .iris-card-signals ul {
@@ -121,7 +134,7 @@
 }
 
 .iris-card-toggle {
-  color: #666;
+  color: var(--muted);
   cursor: pointer;
   font-size: 12px;
   padding: 4px 0;
@@ -144,8 +157,9 @@ details.iris-card-signals[open] > .iris-card-toggle::before {
 .iris-card-footer {
   margin-top: 8px;
   font-size: 11px;
-  color: #999;
+  color: var(--muted);
   text-align: right;
+  opacity: 0.7;
 }
 
 
@@ -154,6 +168,8 @@ html, body {
   height: 100vh;
   margin: 0;
   overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .iris-popup {
@@ -165,6 +181,8 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .iris-popup-header {
@@ -173,7 +191,7 @@ html, body {
   gap: 10px;
   margin-bottom: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 .iris-logo-mark {
@@ -191,23 +209,23 @@ html, body {
 .iris-logo {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--text);
   letter-spacing: 0.5px;
   line-height: 1.1;
 }
 
 .iris-brand {
   font-size: 11px;
-  color: #888;
+  color: var(--muted);
   line-height: 1.2;
   text-decoration: underline;
-  text-decoration-color: #ccc;
+  text-decoration-color: rgba(255, 255, 255, 0.15);
   cursor: pointer;
 }
 
 .iris-brand:hover {
-  color: #555;
-  text-decoration-color: #888;
+  color: var(--accent2);
+  text-decoration-color: var(--accent2);
 }
 
 .iris-popup-body {
@@ -216,41 +234,48 @@ html, body {
 
 .iris-popup-hint {
   font-size: 13px;
-  color: #666;
+  color: var(--muted);
   margin-bottom: 12px;
 }
 
 .iris-btn {
-  background: #1a1a2e;
-  color: #e0e0ff;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  box-shadow: 0 4px 12px var(--glow), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  color: #fff;
   border: none;
-  border-radius: 6px;
-  padding: 10px 20px;
+  border-radius: 8px;
+  padding: 10px 24px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
 }
 
 .iris-btn:hover {
-  background: #2a2a4e;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+
+.iris-btn:active {
+  transform: translateY(0);
 }
 
 .iris-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 .iris-error {
-  color: #dc2626;
+  color: #f87171;
   font-size: 13px;
 }
 
 .iris-tab-banner {
   font-size: 12px;
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 6px;
   padding: 7px 10px;
   margin-bottom: 10px;
@@ -258,7 +283,7 @@ html, body {
 }
 
 .iris-tab-banner:hover {
-  background: #fef3c7;
+  background: rgba(245, 158, 11, 0.12);
 }
 
 .iris-email-meta {
@@ -266,7 +291,7 @@ html, body {
   grid-template-columns: auto 1fr;
   gap: 3px 8px;
   padding: 6px 0 10px;
-  border-bottom: 1px solid #ececec;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
 }
 
@@ -275,14 +300,14 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: #aaa;
+  color: var(--muted);
   white-space: nowrap;
   padding-top: 1px;
 }
 
 .iris-meta-value {
   font-size: 12px;
-  color: #333;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -300,11 +325,12 @@ html, body {
 .iris-panel-footer {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border);
   font-size: 10px;
-  color: #ccc;
+  color: var(--muted);
   text-align: center;
   flex-shrink: 0;
+  opacity: 0.6;
 }
 
 /* ProtonMail - "Verify authentication" button, appended inside the result card */
@@ -313,23 +339,23 @@ html, body {
   width: 100%;
   margin-top: 10px;
   padding: 7px 0;
-  background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 5px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--muted);
   cursor: pointer;
   text-align: center;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .iris-btn-verify:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.2);
-  color: #374151;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text);
 }
 
 .iris-btn-verify:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
   cursor: not-allowed;
 }
