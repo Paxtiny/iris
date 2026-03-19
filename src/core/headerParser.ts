@@ -1,4 +1,4 @@
-import type { AuthResult, EmailMetadata } from "./types";
+import type { AuthResult, EmailMetadata, AttachmentInfo } from "./types";
 
 /** Parse raw .eml content and extract structured email metadata */
 export function parseEmailHeaders(emlContent: string): EmailMetadata {
@@ -148,6 +148,79 @@ function parseDkimDomain(headers: Map<string, string[]>): string | null {
   }
 
   return null;
+}
+
+/**
+ * Extract attachment filenames from a raw EML/MIME string.
+ * Handles Content-Disposition and Content-Type name parameter.
+ * Also decodes RFC 2047 encoded-words (=?utf-8?B?...?= / =?utf-8?Q?...?=).
+ */
+export function parseAttachments(emlContent: string): AttachmentInfo[] {
+  const attachments: AttachmentInfo[] = [];
+  const seen = new Set<string>();
+
+  // Regex for Content-Disposition: attachment; filename="..." or filename*=...
+  const dispositionRe =
+    /Content-Disposition\s*:\s*attachment[^\r\n]*(?:\r?\n[ \t][^\r\n]*)*/gi;
+  for (const block of emlContent.matchAll(dispositionRe)) {
+    const filename = extractFilenameParam(block[0]);
+    if (filename && !seen.has(filename)) {
+      seen.add(filename);
+      attachments.push({ filename });
+    }
+  }
+
+  // Regex for Content-Type: ...; name="..." (catches inline attachments not in Content-Disposition)
+  const contentTypeRe =
+    /Content-Type\s*:\s*([a-z0-9!#$&\-^_]+\/[a-z0-9!#$&\-^_.+]+)[^\r\n]*(?:\r?\n[ \t][^\r\n]*)*/gi;
+  for (const block of emlContent.matchAll(contentTypeRe)) {
+    const mimeType = block[1]!.toLowerCase();
+    if (mimeType === "text/plain" || mimeType === "text/html" || mimeType === "multipart/alternative") continue;
+    const filename = extractFilenameParam(block[0], "name");
+    if (filename && !seen.has(filename)) {
+      seen.add(filename);
+      attachments.push({ filename, mimeType });
+    }
+  }
+
+  return attachments;
+}
+
+/** Extract filename= or name= parameter from a MIME header block */
+function extractFilenameParam(block: string, param = "filename"): string | null {
+  // RFC 2231 encoded: filename*=UTF-8''encoded%20name.ext
+  const rfc2231 = new RegExp(`${param}\\*\\s*=\\s*[^']*''([^\\s;\\r\\n]+)`, "i");
+  const m2231 = block.match(rfc2231);
+  if (m2231) {
+    try { return decodeURIComponent(m2231[1]!); } catch { /* fall through */ }
+  }
+
+  // Quoted: filename="name.ext"
+  const quoted = new RegExp(`${param}\\s*=\\s*"([^"]*)"`, "i");
+  const mq = block.match(quoted);
+  if (mq) return decodeRfc2047(mq[1]!.trim());
+
+  // Unquoted: filename=name.ext
+  const unquoted = new RegExp(`${param}\\s*=\\s*([^\\s;\\r\\n"]+)`, "i");
+  const mu = block.match(unquoted);
+  if (mu) return decodeRfc2047(mu[1]!.trim());
+
+  return null;
+}
+
+/** Decode RFC 2047 encoded-words: =?charset?B?base64?= or =?charset?Q?quoted?= */
+function decodeRfc2047(text: string): string {
+  return text.replace(/=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi, (_match, _charset, enc, encoded) => {
+    try {
+      if (enc.toUpperCase() === "B") {
+        return atob(encoded);
+      } else {
+        return encoded.replace(/=([0-9A-F]{2})/gi, (_: string, hex: string) =>
+          String.fromCharCode(parseInt(hex, 16))
+        ).replace(/_/g, " ");
+      }
+    } catch { return text; }
+  });
 }
 
 /** Extract domains from Received headers */

@@ -1,15 +1,30 @@
 // nicodAImus iris - Gmail content script
 // Injects the "iris" check button and handles email analysis
 
-import { parseEmailHeaders } from "../../core/headerParser";
+import { parseEmailHeaders, parseAttachments } from "../../core/headerParser";
 import { analyzeDomains } from "../../core/domainAnalyzer";
 import { extractLinks } from "../../core/linkExtractor";
 import { detectUrgency } from "../../core/urgencyDetector";
+import { analyzeAttachments, emptyAttachmentAnalysis } from "../../core/attachmentAnalyzer";
 import { scoreEmail, type ScoreOptions } from "../../core/scorer";
 import { createResultCardElement } from "../../ui/components";
 import type { EmailMetadata, ExtractedLink } from "../../core/types";
 
 const LOG_PREFIX = "[iris]";
+
+/**
+ * Check if a data-message-id element belongs to the logged-in user (sent message).
+ * Gmail uses "msg-f:" for fetched/received and "msg-a:" for authored/sent messages.
+ */
+function isOwnMessage(msgElement: Element): boolean {
+  const msgId = msgElement.getAttribute("data-message-id") ?? "";
+  // Gmail internal convention: msg-a: = authored (sent), msg-f: = fetched (received)
+  if (msgId.startsWith("#msg-a:")) {
+    console.log(LOG_PREFIX, "Skipping own (authored) message:", msgId);
+    return true;
+  }
+  return false;
+}
 
 /** Identified email ID with its source, so we can construct the right URL */
 interface EmailId {
@@ -17,6 +32,8 @@ interface EmailId {
   id: string;
   /** Where we got it from - determines URL parameter format */
   source: "url-hash" | "data-message-id" | "row-attribute" | "row-link" | "display-container";
+  /** True if only the user's own sent messages were visible */
+  ownMessageOnly?: boolean;
 }
 
 /**
@@ -43,12 +60,26 @@ function getEmailId(): EmailId | null {
   for (const selector of emailDisplaySelectors) {
     const elements = document.querySelectorAll(selector);
     if (elements.length > 0) {
-      const lastEl = elements[elements.length - 1]!;
-      const msgId = lastEl.getAttribute("data-message-id");
+      // Pick the last VISIBLE, NON-SELF element.
+      // Skip the user's own sent messages (msg-a:) - analyze incoming mail only.
+      let targetEl: Element | null = null;
+      let fallbackEl: Element | null = null;
+      for (const el of elements) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          fallbackEl = el;
+          if (!isOwnMessage(el)) {
+            targetEl = el;
+          }
+        }
+      }
+      // If only own messages visible, flag it - user already replied, no need to scan
+      const ownOnly = targetEl === null && fallbackEl !== null;
+      targetEl ??= fallbackEl ?? elements[elements.length - 1]!;
+      const msgId = targetEl.getAttribute("data-message-id");
       if (msgId) {
-        // Keep the raw value - e.g. "#msg-f:1849504883267" - we'll format it per-URL
-        console.log(LOG_PREFIX, `Message ID from "${selector}" (${elements.length} matches, using last):`, msgId);
-        return { id: msgId, source: "data-message-id" };
+        console.log(LOG_PREFIX, `Message ID from "${selector}" (${elements.length} total${ownOnly ? ", own message only" : ""}):`, msgId);
+        return { id: msgId, source: "data-message-id", ownMessageOnly: ownOnly };
       }
     }
   }
@@ -99,9 +130,13 @@ function getEmailId(): EmailId | null {
   return null;
 }
 
+/** Cached ik value - doesn't change within a Gmail session */
+let cachedIk: string | null = null;
+
 /** Extract Gmail's session key (ik parameter) from the page.
  *  Gmail embeds this in GLOBALS or in existing AJAX URLs on the page. */
 function getGmailIk(): string | null {
+  if (cachedIk) return cachedIk;
   // Method 1: Look for ik= in any script or link on the page
   const scripts = document.querySelectorAll("script");
   for (const script of scripts) {
@@ -111,7 +146,8 @@ function getGmailIk(): string | null {
       ?? text.match(/GLOBALS\[9\]\s*=\s*["']([a-f0-9]+)["']/i);
     if (ikMatch?.[1]) {
       console.log(LOG_PREFIX, "Gmail ik from script:", ikMatch[1]);
-      return ikMatch[1];
+      cachedIk = ikMatch[1];
+      return cachedIk;
     }
   }
 
@@ -122,7 +158,8 @@ function getGmailIk(): string | null {
     const match = url.match(/[?&]ik=([a-f0-9]+)/i);
     if (match?.[1]) {
       console.log(LOG_PREFIX, "Gmail ik from link:", match[1]);
-      return match[1];
+      cachedIk = match[1];
+      return cachedIk;
     }
   }
 
@@ -187,7 +224,7 @@ async function tryFetchEml(emailId: EmailId): Promise<string | null> {
     urls.push(`/mail/u/0/?view=om${ikParam}&permmsgid=${permMsgId}`);
     const numericMatch = emailId.id.match(/(\d{10,})/);
     if (numericMatch) {
-      const hexId = BigInt(numericMatch[1]).toString(16);
+      const hexId = BigInt(numericMatch[1]!).toString(16);
       urls.push(`/mail/u/0/?view=om${ikParam}&th=${hexId}`);
     }
   } else {
@@ -277,12 +314,25 @@ function decodeHtmlEntities(text: string): string {
 /** Find the container element for the currently displayed email.
  *  In preview pane mode, multiple emails exist in the DOM - we need the right one. */
 function getDisplayedEmailContainer(): HTMLElement | null {
-  // Find the last data-message-id element (most recently rendered = currently displayed)
+  // Find the VISIBLE data-message-id element (Gmail keeps old emails in DOM but hides them)
   const msgElements = document.querySelectorAll(
     ".adn [data-message-id], .aeJ [data-message-id], .h7 [data-message-id], [data-message-id]"
   );
   if (msgElements.length === 0) return null;
-  const lastMsg = msgElements[msgElements.length - 1]!;
+  // Prefer the last visible NON-SELF message (skip user's own replies in threads)
+  let lastMsg: Element | null = null;
+  let fallbackMsg: Element | null = null;
+  for (const el of msgElements) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      fallbackMsg = el;
+      if (!isOwnMessage(el)) {
+        lastMsg = el;
+      }
+    }
+  }
+  lastMsg ??= fallbackMsg;
+  lastMsg ??= msgElements[msgElements.length - 1]!;
 
   // Walk up to find the email thread/message container
   // Gmail wraps each message in nested divs - find a reasonable ancestor
@@ -414,6 +464,42 @@ function extractBodyTextFromDom(): string {
   return parts.join("\n");
 }
 
+/** Extract attachment filenames from Gmail's rendered DOM.
+ *  Used as fallback when the raw EML is not available.
+ *  Gmail renders attachment chips with aria-label="filename (size)" on download buttons,
+ *  and stores filenames in [data-tooltip] and as visible text in .aV3 / .vI spans. */
+function extractAttachmentsFromDom(): import("../../core/types").AttachmentInfo[] {
+  const attachments: import("../../core/types").AttachmentInfo[] = [];
+  const seen = new Set<string>();
+
+  const scope = getDisplayedEmailContainer() ?? document;
+
+  // Strategy 1: [download] attribute on anchor elements (most reliable - set by Gmail to filename)
+  for (const el of scope.querySelectorAll<HTMLAnchorElement>("a[download]")) {
+    const filename = el.getAttribute("download")?.trim();
+    if (filename && filename.includes(".") && !seen.has(filename)) {
+      seen.add(filename);
+      attachments.push({ filename });
+    }
+  }
+
+  // Strategy 2: aria-label on attachment action buttons ("Download filename.ext")
+  for (const el of scope.querySelectorAll<HTMLElement>("[aria-label]")) {
+    const label = el.getAttribute("aria-label") ?? "";
+    // Gmail format: "Download attachment_name.ext" or just "filename.ext"
+    const match = label.match(/(?:Download\s+)?(.+\.[a-zA-Z0-9]{1,10})(?:\s+\([\d.]+\s*[KMG]B\))?$/i);
+    if (match?.[1]) {
+      const filename = match[1].trim();
+      if (!seen.has(filename)) {
+        seen.add(filename);
+        attachments.push({ filename });
+      }
+    }
+  }
+
+  return attachments;
+}
+
 /** Run the full analysis pipeline - tries .eml first, falls back to DOM parsing */
 async function analyzeEmail(emailId: EmailId) {
   // Try .eml fetch first (gives us full headers including auth)
@@ -434,7 +520,12 @@ async function analyzeEmail(emailId: EmailId) {
     const linkDomains = links.map((l) => l.domain);
     const domainAnalysis = analyzeDomains(metadata, linkDomains);
     const urgencyAnalysis = detectUrgency(emlContent);
-    return scoreEmail(metadata, domainAnalysis, urgencyAnalysis);
+    const rawAttachments = parseAttachments(emlContent);
+    const attachmentAnalysis = analyzeAttachments(rawAttachments);
+    if (rawAttachments.length > 0) {
+      console.log(LOG_PREFIX, "Attachments from EML:", rawAttachments.map((a) => a.filename));
+    }
+    return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, {}, attachmentAnalysis);
   }
 
   // Fallback: DOM-based analysis (no auth headers, but links/urgency/domains work)
@@ -468,102 +559,45 @@ async function analyzeEmail(emailId: EmailId) {
   const bodyText = extractBodyTextFromDom();
   const urgencyAnalysis = detectUrgency(bodyText);
 
+  // DOM attachment extraction - Gmail renders attachment chips with aria-label
+  const domAttachments = extractAttachmentsFromDom();
+  const attachmentAnalysis = analyzeAttachments(domAttachments);
+  if (domAttachments.length > 0) {
+    console.log(LOG_PREFIX, "Attachments from DOM:", domAttachments.map((a) => a.filename));
+  }
+
   console.log(LOG_PREFIX, "DOM analysis - sender:", sender.fromDomain,
     "links:", linkDomains.length, "urgency:", urgencyAnalysis.hasUrgency);
 
   const scoreOptions: ScoreOptions = { skipAuth: true };
-  return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, scoreOptions);
+  return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, scoreOptions, attachmentAnalysis);
 }
 
-/** Find the Gmail toolbar and inject the iris button */
-function injectButton(): void {
-  // Avoid duplicate injection
-  if (document.getElementById("iris-check-button")) return;
+interface AnalysisResponse { html: string | null; subject?: string; from?: string }
 
-  // Try multiple toolbar selectors (Gmail changes these)
-  const selectors = [
-    '[role="toolbar"][gh="mtb"]',        // Main toolbar in email view
-    '[role="toolbar"][gh="tm"]',         // Thread toolbar
-    '.iH > div > [role="toolbar"]',      // Alternative structure
-    'div.nH [role="toolbar"]',           // Broader match
-  ];
-
-  let toolbar: HTMLElement | null = null;
-  for (const selector of selectors) {
-    toolbar = document.querySelector(selector) as HTMLElement | null;
-    if (toolbar) {
-      console.log(LOG_PREFIX, "Found toolbar with selector:", selector);
-      break;
-    }
-  }
-
-  if (!toolbar) {
-    console.log(LOG_PREFIX, "No toolbar found, will retry on navigation");
-    return;
-  }
-
-  const button = document.createElement("div");
-  button.id = "iris-check-button";
-  button.className = "iris-toolbar-button";
-  button.setAttribute("role", "button");
-  button.setAttribute("aria-label", "Check email with nicodAImus iris");
-  button.setAttribute("data-tooltip", "Check with iris");
-  button.textContent = "iris";
-
-  button.addEventListener("click", handleCheck);
-
-  toolbar.appendChild(button);
-  console.log(LOG_PREFIX, "Button injected into toolbar");
-}
-
-/** Handle the check button click */
-async function handleCheck(): Promise<void> {
-  const button = document.getElementById("iris-check-button");
-
-  // Remove any previous result
-  const existing = document.getElementById("iris-result-card");
-  if (existing) existing.remove();
-
-  if (button) {
-    button.textContent = "...";
-    button.classList.add("iris-loading");
-  }
-
+/** Handle the check trigger - returns HTML + metadata for the popup to display. */
+async function handleCheck(): Promise<AnalysisResponse> {
   try {
     const emailId = getEmailId();
     if (!emailId) {
-      showError("Could not identify the current email. Try opening it in full view.");
-      return;
+      return { html: '<div class="iris-card iris-card-error"><p>Could not identify the current email. Try opening it in full view.</p></div>' };
+    }
+
+    if (emailId.ownMessageOnly) {
+      return { html: '<div class="iris-card iris-card-info"><span class="iris-info-icon">i</span><p>You already replied to this conversation. No scan needed.</p></div>' };
     }
 
     const result = await analyzeEmail(emailId);
+    const html = createResultCardElement(result).outerHTML;
 
-    // Build result card as DOM element (no innerHTML, CSP-safe)
-    const cardElement = createResultCardElement(result);
-
-    // Try to insert result card above the email body
-    const containerSelectors = [
-      ".adn.ads",                          // Email view container
-      '[role="main"] .nH .nH .nH',        // Nested container
-      '[role="list"]',                      // Conversation view
-      '[role="main"]',                      // Fallback
-    ];
-
-    let container: HTMLElement | null = null;
-    for (const selector of containerSelectors) {
-      container = document.querySelector(selector) as HTMLElement | null;
-      if (container) break;
-    }
-
-    if (container) {
-      const wrapper = document.createElement("div");
-      wrapper.id = "iris-result-card";
-      wrapper.appendChild(cardElement);
-      container.insertBefore(wrapper, container.firstChild);
-      console.log(LOG_PREFIX, "Result card inserted");
-    } else {
-      console.warn(LOG_PREFIX, "No container found for result card");
-    }
+    // Extract subject and sender scoped to the same container used during analysis,
+    // so the metadata matches the email that was actually scored.
+    const container = getDisplayedEmailContainer() ?? document;
+    const subject = (container.querySelector<HTMLElement>(".hP, h2.hP")
+      ?? document.querySelector<HTMLElement>(".hP, h2.hP"))?.innerText?.trim() ?? "";
+    const from = (container.querySelector<HTMLElement>(".gD[email]")
+      ?? document.querySelector<HTMLElement>(".gD[email]"))?.getAttribute("email") ?? "";
+    return { html, subject, from };
   } catch (err: unknown) {
     const message = err instanceof Error
       ? err.message
@@ -571,34 +605,8 @@ async function handleCheck(): Promise<void> {
         ? err
         : String(err);
     console.error(LOG_PREFIX, "Analysis error:", err);
-    showError(`Analysis failed: ${message}`);
-  } finally {
-    if (button) {
-      button.textContent = "iris";
-      button.classList.remove("iris-loading");
-    }
+    return { html: `<div class="iris-card iris-card-error"><p>Analysis failed: ${message}</p></div>` };
   }
-}
-
-function showError(message: string): void {
-  const existing = document.getElementById("iris-result-card");
-  if (existing) existing.remove();
-
-  const container = document.querySelector('[role="main"]') as HTMLElement;
-  if (!container) return;
-
-  const wrapper = document.createElement("div");
-  wrapper.id = "iris-result-card";
-
-  const card = document.createElement("div");
-  card.className = "iris-card iris-card-error";
-
-  const p = document.createElement("p");
-  p.textContent = message;
-
-  card.appendChild(p);
-  wrapper.appendChild(card);
-  container.insertBefore(wrapper, container.firstChild);
 }
 
 // Listen for messages from popup
@@ -606,35 +614,13 @@ chrome.runtime.onMessage.addListener(
   (
     message: { action: string },
     _sender: chrome.runtime.MessageSender,
-    sendResponse: (response: { html: string | null }) => void
+    sendResponse: (response: AnalysisResponse) => void
   ) => {
     if (message.action === "iris-check") {
-      handleCheck().then(() => {
-        const resultCard = document.getElementById("iris-result-card");
-        sendResponse({ html: resultCard?.innerHTML ?? null });
-      });
+      handleCheck().then((response) => sendResponse(response));
       return true; // async response
     }
   }
 );
 
-// Observe Gmail navigation (SPA - URL changes without page reload)
-let lastHash = window.location.hash;
-const observer = new MutationObserver(() => {
-  const currentHash = window.location.hash;
-  if (currentHash !== lastHash) {
-    lastHash = currentHash;
-    console.log(LOG_PREFIX, "Navigation detected:", currentHash);
-    // Small delay to let Gmail render the new view
-    setTimeout(injectButton, 500);
-    setTimeout(injectButton, 1500); // retry in case Gmail is slow
-  }
-});
-
-observer.observe(document.body, { childList: true, subtree: true });
-
-// Initial injection with retries
 console.log(LOG_PREFIX, "Content script loaded on", window.location.href);
-setTimeout(injectButton, 1000);
-setTimeout(injectButton, 3000);
-setTimeout(injectButton, 5000);

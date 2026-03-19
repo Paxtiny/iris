@@ -68,6 +68,13 @@ describe("detectHomoglyphs", () => {
     expect(results[0]![1]).toBe("google.com");
   });
 
+  it("detects paypa1-security.xyz as PayPal impersonation (compound domain)", () => {
+    const results = detectHomoglyphs(["paypa1-security.xyz"]);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0]![0]).toBe("paypa1-security.xyz");
+    expect(results[0]![1]).toBe("paypal.com");
+  });
+
   it("does not flag legitimate google.com", () => {
     const results = detectHomoglyphs(["google.com"]);
     expect(results.length).toBe(0);

@@ -2,6 +2,7 @@ import type {
   EmailMetadata,
   DomainAnalysis,
   UrgencyAnalysis,
+  AttachmentAnalysis,
   ScoringResult,
   ScoringSignal,
 } from "./types";
@@ -18,7 +19,8 @@ export function scoreEmail(
   metadata: EmailMetadata,
   domains: DomainAnalysis,
   urgency: UrgencyAnalysis,
-  options?: ScoreOptions
+  options?: ScoreOptions,
+  attachments?: AttachmentAnalysis,
 ): ScoringResult {
   const signals: ScoringSignal[] = [];
   let rawScore = 0;
@@ -120,6 +122,49 @@ export function scoreEmail(
     rawScore += 1;
   }
 
+  // Attachment signals
+  if (attachments && attachments.attachments.length > 0) {
+    const isSafe =
+      attachments.dangerousExecutables.length === 0 &&
+      attachments.scriptFiles.length === 0 &&
+      attachments.macroFiles.length === 0 &&
+      attachments.doubleExtensions.length === 0 &&
+      attachments.rtlTricks.length === 0;
+
+    if (isSafe) {
+      const names = attachments.attachments.map((a) => a.filename).slice(0, 3).join(", ");
+      const more = attachments.attachments.length > 3 ? ` (+${attachments.attachments.length - 3} more)` : "";
+      signals.push({
+        name: "attachments_ok",
+        points: 0,
+        detail: `${attachments.attachments.length} attachment(s) - no suspicious file types: ${names}${more}`,
+      });
+    }
+
+    for (const f of attachments.rtlTricks) {
+      signals.push({ name: "attachment_rtl", points: 4, detail: `Attachment filename uses Unicode direction trick to hide its real extension: "${f}"` });
+      rawScore += 4;
+    }
+    for (const f of attachments.doubleExtensions) {
+      signals.push({ name: "attachment_double_ext", points: 4, detail: `Attachment uses double-extension to disguise its type: "${f}"` });
+      rawScore += 4;
+    }
+    for (const f of attachments.dangerousExecutables) {
+      if (!attachments.doubleExtensions.includes(f)) { // avoid double-counting
+        signals.push({ name: "attachment_executable", points: 4, detail: `Executable attachment: "${f}"` });
+        rawScore += 4;
+      }
+    }
+    for (const f of attachments.scriptFiles) {
+      signals.push({ name: "attachment_script", points: 3, detail: `Script attachment: "${f}"` });
+      rawScore += 3;
+    }
+    for (const f of attachments.macroFiles) {
+      signals.push({ name: "attachment_macro", points: 2, detail: `Macro-enabled Office attachment: "${f}"` });
+      rawScore += 2;
+    }
+  }
+
   // Legitimacy bonus (-3 when all auth passes and domains match)
   // In skipAuth mode, give a smaller bonus (-1) when domains are clean
   if (
@@ -157,7 +202,7 @@ export function scoreEmail(
   const level =
     score <= 2 ? "safe" : score <= 5 ? "uncertain" : "dangerous";
 
-  const explanation = generateExplanation(metadata, domains, urgency, score, level, skipAuth);
+  const explanation = generateExplanation(metadata, domains, urgency, score, level, skipAuth, attachments);
 
   return { score, level, signals, explanation };
 }
@@ -169,7 +214,8 @@ function generateExplanation(
   urgency: UrgencyAnalysis,
   _score: number,
   level: "safe" | "uncertain" | "dangerous",
-  skipAuth = false
+  skipAuth = false,
+  attachments?: AttachmentAnalysis,
 ): string {
   const parts: string[] = [];
 
@@ -187,19 +233,19 @@ function generateExplanation(
       parts.push("All links point to the expected domain.");
     }
   } else if (level === "dangerous") {
+    if (attachments && (attachments.dangerousExecutables.length > 0 || attachments.rtlTricks.length > 0 || attachments.doubleExtensions.length > 0)) {
+      const f = (attachments.rtlTricks[0] ?? attachments.doubleExtensions[0] ?? attachments.dangerousExecutables[0])!;
+      parts.push(`This email contains a dangerous attachment: "${f}". Do not open it.`);
+    }
     if (domains.homoglyphs.length > 0) {
       const [suspicious, legit] = domains.homoglyphs[0]!;
-      parts.push(
-        `The domain "${suspicious}" appears to impersonate "${legit}".`
-      );
+      parts.push(`The domain "${suspicious}" appears to impersonate "${legit}".`);
     }
     if (metadata.dkim === "fail" || metadata.spf === "fail") {
       parts.push("Email authentication failed - the sender may not be who they claim.");
     }
     if (domains.replyToMismatch) {
-      parts.push(
-        `The reply address (${metadata.replyToDomain}) differs from the sender (${domains.senderDomain}).`
-      );
+      parts.push(`The reply address (${metadata.replyToDomain}) differs from the sender (${domains.senderDomain}).`);
     }
     if (urgency.hasCredentialRequest) {
       parts.push("This email asks for your login credentials - legitimate services rarely do this via email.");

@@ -29,6 +29,14 @@ for (const target of targets) {
     format: "iife",
   });
 
+  // Build content script (ProtonMail injection)
+  await esbuild.build({
+    ...commonOptions,
+    entryPoints: ["src/platforms/chrome/content-protonmail.ts"],
+    outfile: `${outdir}/content-protonmail.js`,
+    format: "iife",
+  });
+
   // Build popup
   await esbuild.build({
     ...commonOptions,

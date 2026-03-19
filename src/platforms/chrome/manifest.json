@@ -3,7 +3,7 @@
   "name": "nicodAImus iris",
   "version": "0.1.0",
   "description": "Privacy-first email phishing detection. Scores emails 0-10 for phishing risk, entirely in your browser.",
-  "permissions": [],
+  "permissions": ["activeTab"],
   "host_permissions": [
     "https://mail.google.com/*",
     "https://mail-attachment.googleusercontent.com/*"
@@ -20,12 +20,16 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "nicodAImus iris - Email Check"
+    "default_title": "nicodAImus iris - Email Check",
+    "default_icon": {
+      "32": "icons/nicod-mark.png",
+      "48": "icons/nicod-mark.png",
+      "96": "icons/nicod-mark.png"
+    }
   },
   "icons": {
     "16": "icons/iris-16.png",
-    "48": "icons/iris-48.png",
-    "128": "icons/iris-128.png"
+    "48": "icons/nicod-mark.png",
+    "128": "icons/nicod-mark.png"
   }
 }

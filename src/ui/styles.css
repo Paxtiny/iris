@@ -1,35 +1,5 @@
 /* nicodAImus iris - Styles */
 
-/* Toolbar button injected into Gmail */
-.iris-toolbar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 12px;
-  margin-left: 8px;
-  border-radius: 16px;
-  background: #1a1a2e;
-  color: #e0e0ff;
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.2s, transform 0.1s;
-  border: 1px solid #2a2a4e;
-}
-
-.iris-toolbar-button:hover {
-  background: #2a2a4e;
-  transform: scale(1.02);
-}
-
-.iris-toolbar-button.iris-loading {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
 /* Result card displayed inline in Gmail */
 .iris-card {
   margin: 8px 0 16px 0;
@@ -62,6 +32,30 @@
   background: #f8f8f8;
   border: 1px solid #d4d4d4;
   color: #666;
+}
+
+.iris-card-info {
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iris-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  font-style: italic;
+  flex-shrink: 0;
 }
 
 /* Score badge */
@@ -154,20 +148,44 @@ details.iris-card-signals[open] > .iris-card-toggle::before {
   text-align: right;
 }
 
+
 /* Popup styles */
+html, body {
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+}
+
 .iris-popup {
   width: 320px;
+  height: 100vh;
   padding: 16px;
+  box-sizing: border-box;
   font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .iris-popup-header {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 16px;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   border-bottom: 1px solid #eee;
+}
+
+.iris-logo-mark {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.iris-logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .iris-logo {
@@ -175,11 +193,13 @@ details.iris-card-signals[open] > .iris-card-toggle::before {
   font-weight: 700;
   color: #1a1a2e;
   letter-spacing: 0.5px;
+  line-height: 1.1;
 }
 
 .iris-brand {
-  font-size: 12px;
+  font-size: 11px;
   color: #999;
+  line-height: 1.2;
 }
 
 .iris-popup-body {
@@ -218,6 +238,79 @@ details.iris-card-signals[open] > .iris-card-toggle::before {
   font-size: 13px;
 }
 
+.iris-tab-banner {
+  font-size: 12px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 7px 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.iris-tab-banner:hover {
+  background: #fef3c7;
+}
+
+.iris-email-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 8px;
+  padding: 6px 0 10px;
+  border-bottom: 1px solid #ececec;
+  margin-bottom: 4px;
+}
+
+.iris-meta-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #aaa;
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+.iris-meta-value {
+  font-size: 12px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .iris-popup-result {
-  margin-top: 12px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0; /* required for flex children to shrink below content size */
+  margin-top: 8px;
+  padding-bottom: 12px; /* breathing room so last element isn't flush against the edge */
+}
+
+/* ProtonMail - "Verify authentication" button, appended inside the result card */
+.iris-btn-verify {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px 0;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 5px;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.iris-btn-verify:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #374151;
+}
+
+.iris-btn-verify:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

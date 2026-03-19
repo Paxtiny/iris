@@ -9,13 +9,18 @@
 <body>
   <div id="iris-popup" class="iris-popup">
     <div class="iris-popup-header">
-      <span class="iris-logo">iris</span>
-      <span class="iris-brand">by nicodAImus</span>
+      <img src="icons/nicod-mark.png" class="iris-logo-mark" alt="nicodAImus">
+      <div class="iris-logo-text">
+        <span class="iris-logo">iris</span>
+        <span class="iris-brand">by nicodAImus</span>
+      </div>
     </div>
+    <div id="iris-tab-banner" class="iris-tab-banner" style="display:none;"></div>
     <div id="iris-popup-content" class="iris-popup-body">
-      <p class="iris-popup-hint">Open an email in Gmail, then click here to check it.</p>
-      <button id="iris-check-btn" class="iris-btn">Check Current Email</button>
+      <p class="iris-popup-hint">Open an email in Gmail or Proton Mail, then click Scan.</p>
+      <button id="iris-check-btn" class="iris-btn">Scan</button>
     </div>
+    <div id="iris-email-meta" class="iris-email-meta" style="display:none;"></div>
     <div id="iris-popup-result" class="iris-popup-result" style="display:none;"></div>
   </div>
   <script src="popup.js"></script>

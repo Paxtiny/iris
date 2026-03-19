@@ -44,6 +44,27 @@ export interface UrgencyAnalysis {
   credentialMatches: string[];
 }
 
+/** A single attachment identified in an email */
+export interface AttachmentInfo {
+  filename: string;
+  mimeType?: string;
+}
+
+/** Result of attachment analysis */
+export interface AttachmentAnalysis {
+  attachments: AttachmentInfo[];
+  /** Filenames with directly executable extensions (.exe, .bat, .scr ...) */
+  dangerousExecutables: string[];
+  /** Filenames with script extensions (.ps1, .vbs, .js, .jar ...) */
+  scriptFiles: string[];
+  /** Macro-enabled Office files (.xlsm, .docm ...) */
+  macroFiles: string[];
+  /** Filenames using double-extension trick (invoice.pdf.exe) */
+  doubleExtensions: string[];
+  /** Filenames using Unicode RTL override to spoof extension */
+  rtlTricks: string[];
+}
+
 /** Extracted link from email body */
 export interface ExtractedLink {
   href: string;
