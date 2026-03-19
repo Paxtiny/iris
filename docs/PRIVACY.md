@@ -28,7 +28,7 @@ This only happens if you actively click the link. The extension never makes this
 
 ## What data iris stores
 
-iris does not store any data. Each analysis is performed on-demand when you click the button. Nothing is saved to disk, local storage, or cookies.
+iris does not store any data. Each analysis is performed on-demand when you click Scan. Nothing is saved to disk, local storage, or cookies.
 
 ## Permissions
 

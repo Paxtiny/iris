@@ -25,9 +25,9 @@ For Proton Mail, iris also offers an optional **Verify authentication** step tha
 
 ## Privacy
 
-All analysis happens locally in your browser. Zero network requests. Zero data collection. [Full privacy policy](docs/PRIVACY.md).
+All analysis happens locally in your browser. The extension makes no automatic network requests. [Full privacy policy](docs/PRIVACY.md).
 
-Verify yourself: open DevTools Network tab while using iris. You will see no outgoing requests.
+Verify yourself: open DevTools Network tab while using iris. You will see no outgoing requests from the extension itself (the only exception is if you actively click the "by nicodAImus" link in the panel header).
 
 ## Install
 
