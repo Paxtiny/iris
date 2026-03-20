@@ -1,44 +1,69 @@
 /* nicodAImus iris - Styles */
+/* Design direction: "Iris Obsidian" - glass-on-void, premium security aesthetic */
 
 /* Brand tokens */
 :root {
   --bg: #0b0b10;
-  --text: #e9eaee;
-  --muted: #9aa0a6;
+  --surface: #131318;
+  --surface-low: #1b1b20;
+  --surface-high: #2a292f;
+  --text: #e4e1e9;
+  --muted: #ccc3d8;
+  --muted-dim: rgba(228, 225, 233, 0.4);
   --accent: #7c3aed;
   --accent2: #8b5cf6;
-  --border: rgba(255, 255, 255, 0.06);
+  --accent-text: #d2bbff;
+  --border: rgba(74, 68, 85, 0.15);
   --success: #10b981;
   --danger: #ef4444;
+  --danger-dark: #93000a;
+  --warning: #f59e0b;
   --glow: rgba(124, 58, 237, 0.3);
 }
 
-/* Result card displayed inline in Gmail */
+/* Result card displayed inline in Gmail / panel */
 .iris-card {
   margin: 8px 0 16px 0;
   padding: 16px 20px;
-  border-radius: 8px;
-  font-family: system-ui, -apple-system, sans-serif;
+  border-radius: 12px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 100;
+  overflow: hidden;
 }
 
 .iris-card-safe {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(19, 19, 24, 0.8) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
 }
 
 .iris-card-uncertain {
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(19, 19, 24, 0.8) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
 }
 
 .iris-card-dangerous {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: linear-gradient(135deg, rgba(147, 0, 10, 0.2) 0%, rgba(19, 19, 24, 0.8) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+/* Radial glow behind dangerous card */
+.iris-card-dangerous::before {
+  content: "";
+  position: absolute;
+  top: -48px;
+  right: -48px;
+  width: 128px;
+  height: 128px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 50%;
+  filter: blur(48px);
+  pointer-events: none;
 }
 
 .iris-card-error {
@@ -48,8 +73,8 @@
 }
 
 .iris-card-info {
-  background: rgba(124, 58, 237, 0.08);
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(19, 19, 24, 0.8) 100%);
+  border: 1px solid var(--border);
   color: #a78bfa;
   display: flex;
   align-items: center;
@@ -71,30 +96,38 @@
   flex-shrink: 0;
 }
 
-/* Score badge */
+/* Score badge - hollow glass style with colored glow */
 .iris-score-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
-  color: white;
   flex-shrink: 0;
 }
 
 .iris-score-safe {
-  background: #22c55e;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--success);
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
 }
 
 .iris-score-uncertain {
-  background: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--warning);
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4));
 }
 
 .iris-score-dangerous {
-  background: #ef4444;
+  background: rgba(147, 0, 10, 0.4);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ffb4ab;
+  filter: drop-shadow(0 0 8px rgba(255, 180, 171, 0.4));
 }
 
 /* Card layout */
@@ -103,48 +136,63 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
 }
 
 .iris-card-level-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+  letter-spacing: 0.08em;
   margin-bottom: 4px;
 }
 
+/* Level label colors match the result type */
+.iris-card-safe .iris-card-level-label { color: var(--success); }
+.iris-card-uncertain .iris-card-level-label { color: var(--warning); }
+.iris-card-dangerous .iris-card-level-label { color: var(--danger); }
+
 .iris-card-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text);
+  line-height: 1.2;
 }
 
 .iris-card-explanation {
   color: var(--muted);
-  margin: 8px 0;
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
+/* Signals section */
 .iris-card-signals {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
   font-size: 13px;
   color: var(--muted);
 }
 
 .iris-card-signals ul {
-  margin: 4px 0 0 0;
+  margin: 8px 0 0 0;
   padding-left: 0;
   list-style: none;
 }
 
+/* Signal items in individual rounded pills */
 .iris-card-signals li {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
+  padding: 8px 10px;
+  background: rgba(19, 19, 24, 0.4);
+  border-radius: 8px;
+  font-size: 12px;
 }
 
 .iris-signal-text {
@@ -156,16 +204,21 @@
   flex-shrink: 0;
   font-weight: 700;
   font-size: 12px;
-  color: var(--text);
+  font-family: 'Inter', monospace;
 }
 
+/* Signal score colors match the card type */
+.iris-card-dangerous .iris-signal-score { color: #ffb4ab; }
+.iris-card-uncertain .iris-signal-score { color: var(--warning); }
+.iris-card-safe .iris-signal-score { color: var(--success); }
+
 .iris-card-toggle {
-  color: var(--muted);
+  color: var(--muted-dim);
   cursor: pointer;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   padding: 4px 0;
   list-style: none;
   display: flex;
@@ -192,11 +245,13 @@ details.iris-card-signals[open] > .iris-card-toggle::after {
 }
 
 .iris-card-footer {
-  margin-top: 8px;
-  font-size: 11px;
-  color: var(--muted);
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--muted-dim);
   text-align: right;
-  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 
@@ -212,9 +267,9 @@ html, body {
 .iris-popup {
   width: 320px;
   height: 100vh;
-  padding: 16px;
+  padding: 0;
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -224,49 +279,49 @@ html, body {
 
 .iris-popup-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  background: var(--surface);
+}
+
+.iris-popup-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .iris-logo-mark {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
-}
-
-.iris-logo-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
 }
 
 .iris-logo {
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: 0.5px;
-  line-height: 1.1;
+  letter-spacing: 0.02em;
 }
 
 .iris-brand {
   font-size: 11px;
-  color: var(--muted);
-  line-height: 1.2;
-  text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-dim);
+  text-decoration: none;
   cursor: pointer;
+  transition: color 0.15s;
 }
 
 .iris-brand:hover {
-  color: var(--accent2);
-  text-decoration-color: var(--accent2);
+  color: var(--text);
 }
 
 .iris-popup-body {
   text-align: center;
+  padding: 16px 16px 0;
 }
 
 .iris-popup-hint {
@@ -276,25 +331,30 @@ html, body {
 }
 
 .iris-btn {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5);
-  box-shadow: 0 4px 12px var(--glow), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  width: 100%;
+  background: var(--accent);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.2);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 10px 24px;
-  font-size: 14px;
-  font-weight: 700;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .iris-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  brightness: 1.1;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
 }
 
 .iris-btn:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
 .iris-btn:disabled {
@@ -305,8 +365,8 @@ html, body {
 
 /* Pulse glow while scanning */
 @keyframes iris-pulse {
-  0%, 100% { box-shadow: 0 4px 12px var(--glow), 0 0 0 1px rgba(255, 255, 255, 0.1) inset; }
-  50% { box-shadow: 0 4px 24px rgba(124, 58, 237, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.15) inset; }
+  0%, 100% { box-shadow: 0 4px 16px rgba(124, 58, 237, 0.2); }
+  50% { box-shadow: 0 4px 28px rgba(124, 58, 237, 0.5); }
 }
 
 .iris-btn.iris-scanning {
@@ -323,9 +383,9 @@ html, body {
   color: #fde68a;
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: 6px;
-  padding: 7px 10px;
-  margin-bottom: 10px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 16px 0;
   cursor: pointer;
 }
 
@@ -337,7 +397,7 @@ html, body {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 3px 8px;
-  padding: 6px 0 10px;
+  padding: 8px 16px 10px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
 }
@@ -346,8 +406,8 @@ html, body {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--muted);
+  letter-spacing: 0.04em;
+  color: var(--muted-dim);
   white-space: nowrap;
   padding-top: 1px;
 }
@@ -363,44 +423,45 @@ html, body {
 .iris-popup-result {
   flex: 1;
   overflow-y: auto;
-  min-height: 0; /* required for flex children to shrink below content size */
-  margin-top: 8px;
-  padding-bottom: 12px; /* breathing room so last element isn't flush against the edge */
+  min-height: 0;
+  margin-top: 4px;
+  padding: 0 16px 12px;
 }
 
 /* Panel-level disclaimer footer */
 .iris-panel-footer {
   margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border);
-  font-size: 10px;
-  color: var(--muted);
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  color: var(--muted-dim);
   text-align: center;
   flex-shrink: 0;
-  opacity: 0.6;
+  line-height: 1.4;
 }
 
 .iris-panel-footer-links {
-  margin-top: 4px;
-  font-size: 10px;
+  padding: 0 16px 10px;
+  font-size: 11px;
   text-align: center;
-  opacity: 0.6;
   flex-shrink: 0;
 }
 
 .iris-panel-footer-links a {
-  color: var(--muted);
+  color: var(--muted-dim);
   text-decoration: none;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: color 0.15s;
 }
 
 .iris-panel-footer-links a:hover {
-  color: var(--accent2);
+  color: var(--text);
 }
 
 .iris-panel-footer-links .iris-link-sep {
-  margin: 0 6px;
-  color: var(--muted);
-  opacity: 0.4;
+  margin: 0 8px;
+  color: var(--muted-dim);
 }
 
 /* ProtonMail - "Verify authentication" button, appended inside the result card */
@@ -410,8 +471,8 @@ html, body {
   margin-top: 10px;
   padding: 7px 0;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font-size: 12px;
   color: var(--muted);
   cursor: pointer;
