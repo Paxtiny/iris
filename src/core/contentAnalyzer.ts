@@ -123,7 +123,7 @@ function detectUrlShorteners(
 
     return {
       name: "url_shortener",
-      points: 1,
+      points: 2,
       detail: `Link uses URL shortener (${linkDomain}) which hides the real destination`,
     };
   }

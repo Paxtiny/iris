@@ -85,7 +85,7 @@ describe("contentAnalyzer", () => {
       const result = analyzeContent(makeInput({ links }));
       const signal = result.signals.find((s) => s.name === "url_shortener");
       expect(signal).toBeDefined();
-      expect(signal!.points).toBe(1);
+      expect(signal!.points).toBe(2);
     });
 
     it("exempts t.co from twitter.com sender", () => {

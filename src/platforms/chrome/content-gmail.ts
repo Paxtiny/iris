@@ -484,6 +484,21 @@ function extractLinksFromDom(): ExtractedLink[] {
     }
   }
 
+  // Also extract URLs from plain text (some emails render URLs without <a> tags)
+  for (const container of bodyContainers) {
+    const text = (container as HTMLElement).textContent ?? "";
+    const urlRegex = /https?:\/\/[^\s<>"')\]]+/gi;
+    for (const match of text.matchAll(urlRegex)) {
+      try {
+        const domain = new URL(match[0]).hostname.toLowerCase();
+        if (!seen.has(domain)) {
+          seen.add(domain);
+          links.push({ href: match[0], domain, displayText: match[0] });
+        }
+      } catch { /* skip malformed URLs */ }
+    }
+  }
+
   console.log(LOG_PREFIX, "Links from DOM:", links.length, links.map(l => l.domain));
   return links;
 }
@@ -568,17 +583,46 @@ async function analyzeEmail(emailId: EmailId) {
       spf: metadata.spf,
       dmarc: metadata.dmarc,
     });
-    const links = extractLinks(emlContent);
-    console.log(LOG_PREFIX, "Extracted links:", links.length);
-    const linkDomains = links.map((l) => l.domain);
-    const domainAnalysis = analyzeDomains(metadata, linkDomains);
-    const urgencyAnalysis = detectUrgency(emlContent);
-    const rawAttachments = parseAttachments(emlContent);
-    const attachmentAnalysis = analyzeAttachments(rawAttachments);
-    if (rawAttachments.length > 0) {
-      console.log(LOG_PREFIX, "Attachments from EML:", rawAttachments.map((a) => a.filename));
+    // EML link extraction can miss links in encoded bodies; supplement with DOM links
+    const emlLinks = extractLinks(emlContent);
+    const domLinks = extractLinksFromDom();
+    // Merge: DOM links are decoded/clean, EML links may catch mailto: or header refs
+    const seenDomains = new Set(emlLinks.map(l => l.domain));
+    const mergedLinks = [...emlLinks];
+    for (const dl of domLinks) {
+      if (!seenDomains.has(dl.domain)) {
+        seenDomains.add(dl.domain);
+        mergedLinks.push(dl);
+      }
     }
-    const contentAnalysis = analyzeContent({ metadata, links, bodyText: emlContent, bodyHtml: emlContent });
+    console.log(LOG_PREFIX, "Links: EML:", emlLinks.length, "DOM:", domLinks.length, "merged:", mergedLinks.length);
+    const linkDomains = mergedLinks.map((l) => l.domain);
+    const domainAnalysis = analyzeDomains(metadata, linkDomains);
+
+    // Use DOM body text for urgency/content analysis (clean, decoded text vs raw EML)
+    const domBodyText = extractBodyTextFromDom();
+    const domBodyHtml = extractBodyHtmlFromDom();
+    const urgencyAnalysis = detectUrgency(domBodyText || emlContent);
+    const rawAttachments = parseAttachments(emlContent);
+    const domAttachments = extractAttachmentsFromDom();
+    // Merge attachments from both sources
+    const mergedAttachmentNames = new Set(rawAttachments.map(a => a.filename));
+    const allAttachments = [...rawAttachments];
+    for (const da of domAttachments) {
+      if (!mergedAttachmentNames.has(da.filename)) {
+        allAttachments.push(da);
+      }
+    }
+    const attachmentAnalysis = analyzeAttachments(allAttachments);
+    if (allAttachments.length > 0) {
+      console.log(LOG_PREFIX, "Attachments:", allAttachments.map((a) => a.filename));
+    }
+    const contentAnalysis = analyzeContent({
+      metadata,
+      links: mergedLinks,
+      bodyText: domBodyText || emlContent,
+      bodyHtml: domBodyHtml || emlContent,
+    });
     return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, {}, attachmentAnalysis, contentAnalysis);
   }
 

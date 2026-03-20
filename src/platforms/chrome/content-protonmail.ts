@@ -165,6 +165,19 @@ function extractLinksFromIframe(): ExtractedLink[] {
     } catch { /* skip malformed URLs */ }
   }
 
+  // Also extract URLs from plain text (some emails render URLs without <a> tags)
+  const bodyText = body.textContent ?? "";
+  const urlRegex = /https?:\/\/[^\s<>"')\]]+/gi;
+  for (const match of bodyText.matchAll(urlRegex)) {
+    try {
+      const domain = new URL(match[0]).hostname.toLowerCase();
+      if (!seen.has(domain)) {
+        seen.add(domain);
+        links.push({ href: match[0], domain, displayText: match[0] });
+      }
+    } catch { /* skip malformed URLs */ }
+  }
+
   console.log(LOG_PREFIX, "Links from iframe:", links.length, links.map((l) => l.domain));
   return links;
 }
@@ -495,7 +508,12 @@ chrome.runtime.onMessage.addListener(
           const urgencyAnalysis = detectUrgency(`${_lastSubject}\n\n${_lastBodyText}`);
           const rawAttachments = extractAttachmentsFromDom();
           const attachmentAnalysis = analyzeAttachments(rawAttachments);
-          const result = scoreEmail(metadata, domainAnalysis, urgencyAnalysis, {}, attachmentAnalysis);
+          // Re-run content analysis so signals survive auth re-scoring
+          const iframe = getContentIframe();
+          const bodyHtml = iframe?.contentDocument?.body?.innerHTML ?? null;
+          const links = extractLinksFromIframe();
+          const contentAnalysis = analyzeContent({ metadata, links, bodyText: _lastBodyText, bodyHtml });
+          const result = scoreEmail(metadata, domainAnalysis, urgencyAnalysis, {}, attachmentAnalysis, contentAnalysis);
           const cardEl = createResultCardElement(result);
           sendResponse({ html: cardEl.outerHTML, subject: _lastSubject, from: metadata.from });
         } catch (err) {

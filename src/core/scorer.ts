@@ -175,8 +175,23 @@ export function scoreEmail(
     }
   }
 
-  // Legitimacy bonus (-3 when all auth passes and domains match)
-  // In skipAuth mode, give a smaller bonus (-1) when domains are clean
+  // Compound risk: attachment + other threat signals = elevated danger.
+  // Even a non-executable attachment (PDF, Office doc) becomes risky in a phishing email.
+  const threatSignalCount = signals.filter(s => s.points > 0).length;
+  if (attachments && attachments.attachments.length > 0 && threatSignalCount > 0) {
+    signals.push({
+      name: "attachment_compound_risk",
+      points: 2,
+      detail: "Email has attachments combined with suspicious signals - do not open attachments, verify with sender through a separate channel",
+    });
+    rawScore += 2;
+  }
+
+  // Legitimacy bonus (when all auth passes and domains match)
+  // Reduce the bonus when content-level threat signals are present - passing auth
+  // just means the sender configured their domain, it doesn't negate phishing content.
+  const contentThreatCount = content?.signals.filter(s => s.points > 0).length ?? 0;
+
   if (
     !skipAuth &&
     metadata.dkim === "pass" &&
@@ -186,24 +201,31 @@ export function scoreEmail(
     domains.homoglyphs.length === 0 &&
     domains.linkDomainMismatches.length === 0
   ) {
-    signals.push({
-      name: "all_auth_pass",
-      points: -3,
-      detail: "All authentication checks passed and domains are consistent",
-    });
-    rawScore -= 3;
+    // No auth bonus when content threats exist - passing auth just means the
+    // attacker set up their domain correctly, it doesn't negate phishing content.
+    if (contentThreatCount === 0) {
+      signals.push({
+        name: "all_auth_pass",
+        points: -3,
+        detail: "All authentication checks passed and domains are consistent",
+      });
+      rawScore -= 3;
+    }
   } else if (
     skipAuth &&
     !domains.replyToMismatch &&
     domains.homoglyphs.length === 0 &&
     domains.linkDomainMismatches.length === 0
   ) {
-    signals.push({
-      name: "domains_clean",
-      points: -1,
-      detail: "All visible domains are consistent (auth headers not available)",
-    });
-    rawScore -= 1;
+    const bonus = contentThreatCount > 0 ? 0 : -1;
+    if (bonus !== 0) {
+      signals.push({
+        name: "domains_clean",
+        points: bonus,
+        detail: "All visible domains are consistent (auth headers not available)",
+      });
+      rawScore += bonus;
+    }
   }
 
   // Clamp to 0-10
@@ -212,7 +234,7 @@ export function scoreEmail(
   const level =
     score <= 2 ? "safe" : score <= 5 ? "uncertain" : "dangerous";
 
-  const explanation = generateExplanation(metadata, domains, urgency, score, level, skipAuth, attachments);
+  const explanation = generateExplanation(metadata, domains, urgency, score, level, skipAuth, attachments, content);
 
   return { score, level, signals, explanation };
 }
@@ -226,11 +248,18 @@ function generateExplanation(
   level: "safe" | "uncertain" | "dangerous",
   skipAuth = false,
   attachments?: AttachmentAnalysis,
+  content?: ContentAnalysis,
 ): string {
   const parts: string[] = [];
+  const contentThreats = content?.signals.filter(s => s.points > 0) ?? [];
 
   if (level === "safe") {
-    if (skipAuth) {
+    if (contentThreats.length > 0) {
+      // Content signals present but score is low (auth bonus offset them)
+      parts.push(
+        `This email from ${domains.senderDomain} has minor content signals but passes authentication checks.`
+      );
+    } else if (skipAuth) {
       parts.push(
         `This email from ${domains.senderDomain} has no suspicious signals in the visible content.`
       );
@@ -239,7 +268,7 @@ function generateExplanation(
         `This email from ${domains.senderDomain} passes all authentication checks (DKIM, SPF, DMARC).`
       );
     }
-    if (domains.linkDomainMismatches.length === 0) {
+    if (domains.linkDomainMismatches.length === 0 && contentThreats.length === 0) {
       parts.push("All links point to the expected domain.");
     }
   } else if (level === "dangerous") {
