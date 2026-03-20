@@ -25,6 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Footer links also need chrome.tabs.create for panel windows.
+  for (const link of document.querySelectorAll<HTMLAnchorElement>(".iris-footer-link")) {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: link.href });
+    });
+  }
+
   // Read from URL params set by background.ts when opening the panel window.
   const params = new URLSearchParams(window.location.search);
   let targetTabId: number | null = params.get("tabId") ? parseInt(params.get("tabId")!, 10) : null;
@@ -49,6 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     checkBtn!.textContent = "Scanning...";
     checkBtn!.setAttribute("disabled", "true");
+    checkBtn!.classList.add("iris-scanning");
     if (bannerDiv) bannerDiv.style.display = "none";
 
     try {
@@ -57,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         resultDiv!.innerHTML =
           '<p class="iris-error">Please click the iris icon while viewing Gmail or Proton Mail.</p>';
         resultDiv!.style.display = "block";
+        checkBtn!.classList.remove("iris-scanning");
         checkBtn!.textContent = "Scan";
         checkBtn!.removeAttribute("disabled");
         return;
@@ -122,6 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
       resultDiv!.style.display = "block";
     }
 
+    checkBtn!.classList.remove("iris-scanning");
     checkBtn!.textContent = "Scan Again";
     checkBtn!.removeAttribute("disabled");
   }

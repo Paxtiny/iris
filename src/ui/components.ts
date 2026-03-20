@@ -14,17 +14,23 @@ export function createResultCardElement(result: ScoringResult): HTMLElement {
   const card = document.createElement("div");
   card.className = `iris-card ${levelClass}`;
 
+  // Threat level label
+  const levelLabel = document.createElement("div");
+  levelLabel.className = "iris-card-level-label";
+  levelLabel.textContent = "Threat Level";
+  card.appendChild(levelLabel);
+
   // Header with score badge
   const header = document.createElement("div");
   header.className = "iris-card-header";
-  const badge = document.createElement("span");
-  badge.className = `iris-score-badge ${scoreClass}`;
-  badge.textContent = String(result.score);
   const title = document.createElement("span");
   title.className = "iris-card-title";
   title.textContent = levelLabels[result.level];
-  header.appendChild(badge);
+  const badge = document.createElement("span");
+  badge.className = `iris-score-badge ${scoreClass}`;
+  badge.textContent = String(result.score);
   header.appendChild(title);
+  header.appendChild(badge);
   card.appendChild(header);
 
   // Explanation
@@ -40,13 +46,20 @@ export function createResultCardElement(result: ScoringResult): HTMLElement {
 
     const summary = document.createElement("summary");
     summary.className = "iris-card-toggle";
-    summary.textContent = "Show details";
+    summary.textContent = "Analysis Signals";
     details.appendChild(summary);
 
     const list = document.createElement("ul");
     for (const signal of result.signals) {
       const li = document.createElement("li");
-      li.textContent = `${signal.detail} (${signal.points > 0 ? "+" : ""}${signal.points})`;
+      const textSpan = document.createElement("span");
+      textSpan.className = "iris-signal-text";
+      textSpan.textContent = signal.detail;
+      const scoreSpan = document.createElement("span");
+      scoreSpan.className = "iris-signal-score";
+      scoreSpan.textContent = `${signal.points > 0 ? "+" : ""}${signal.points}`;
+      li.appendChild(textSpan);
+      li.appendChild(scoreSpan);
       list.appendChild(li);
     }
     details.appendChild(list);
@@ -78,18 +91,19 @@ export function renderResultCard(result: ScoringResult): string {
     result.signals.length > 0
       ? `
     <div class="iris-card-signals">
-      <button class="iris-card-toggle">Show details</button>
+      <button class="iris-card-toggle">Analysis Signals</button>
       <ul style="display:none;">
-        ${result.signals.map((s) => `<li>${escapeHtml(s.detail)} (${s.points > 0 ? "+" : ""}${s.points})</li>`).join("")}
+        ${result.signals.map((s) => `<li><span class="iris-signal-text">${escapeHtml(s.detail)}</span><span class="iris-signal-score">${s.points > 0 ? "+" : ""}${s.points}</span></li>`).join("")}
       </ul>
     </div>`
       : "";
 
   return `
     <div class="iris-card ${levelClass}">
+      <div class="iris-card-level-label">Threat Level</div>
       <div class="iris-card-header">
-        <span class="iris-score-badge ${scoreClass}">${result.score}</span>
         <span class="iris-card-title">${levelLabels[result.level]}</span>
+        <span class="iris-score-badge ${scoreClass}">${result.score}</span>
       </div>
       <div class="iris-card-explanation">${escapeHtml(result.explanation)}</div>
       ${signalsHtml}
