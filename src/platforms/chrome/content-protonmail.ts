@@ -318,7 +318,7 @@ let _lastLinkDomains: string[] = [];
 let _lastBodyText = "";
 let _lastSubject = "";
 
-interface AnalysisResponse { html: string | null; subject?: string; from?: string }
+interface AnalysisResponse { html: string | null; subject?: string; from?: string; provider?: string }
 
 async function analyzeEmail(): Promise<AnalysisResponse> {
   try {
