@@ -89,7 +89,9 @@ document.addEventListener("DOMContentLoaded", () => {
             // Mail provider chip
             if (provider) {
               const providerLabel = provider === "protonmail" ? "Proton Mail" : "Gmail";
-              html += `<span class="iris-provider-chip iris-provider-${provider}">${providerLabel}</span>`;
+              // Inline SVG envelope icon - avoids trademarked logos
+              const mailIcon = `<svg class="iris-provider-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>`;
+              html += `<span class="iris-provider-chip iris-provider-${provider}">${mailIcon} ${providerLabel}</span>`;
             }
             if (subject) {
               html += `<span class="iris-meta-label">Subject</span>`
