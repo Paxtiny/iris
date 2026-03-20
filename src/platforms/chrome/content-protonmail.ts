@@ -250,17 +250,22 @@ function cleanFilename(raw: string | null | undefined): string | null {
 
 // ─── HTML helpers for popup responses ────────────────────────────────────────
 
+/** Escape dynamic strings before inserting into HTML */
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 /** ProtonMail domains used for personal accounts (own sent messages). */
 const PROTONMAIL_OWN_DOMAINS = new Set([
   "protonmail.com", "protonmail.ch", "pm.me", "proton.me",
 ]);
 
 function createInfoHtml(message: string): string {
-  return `<div class="iris-card iris-card-info"><span class="iris-info-icon">i</span><p>${message}</p></div>`;
+  return `<div class="iris-card iris-card-info"><span class="iris-info-icon">i</span><p>${esc(message)}</p></div>`;
 }
 
 function createErrorHtml(message: string): string {
-  return `<div class="iris-card iris-card-error"><p>${message}</p></div>`;
+  return `<div class="iris-card iris-card-error"><p>${esc(message)}</p></div>`;
 }
 
 // ─── View headers modal ───────────────────────────────────────────────────────

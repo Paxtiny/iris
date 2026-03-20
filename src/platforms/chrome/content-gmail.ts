@@ -13,6 +13,11 @@ import type { EmailMetadata, ExtractedLink } from "../../core/types";
 
 const LOG_PREFIX = "[iris]";
 
+/** Escape dynamic strings before inserting into HTML */
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 /**
  * Check if a data-message-id element belongs to the logged-in user (sent message).
  * Gmail uses "msg-f:" for fetched/received and "msg-a:" for authored/sent messages.
@@ -721,7 +726,7 @@ async function handleCheck(): Promise<AnalysisResponse> {
         ? err
         : String(err);
     console.error(LOG_PREFIX, "Analysis error:", err);
-    return { html: `<div class="iris-card iris-card-error"><p>Analysis failed: ${message}</p></div>` };
+    return { html: `<div class="iris-card iris-card-error"><p>Analysis failed: ${esc(message)}</p></div>` };
   }
 }
 

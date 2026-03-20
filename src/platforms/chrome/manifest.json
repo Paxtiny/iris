@@ -6,12 +6,19 @@
   "permissions": ["activeTab"],
   "host_permissions": [
     "https://mail.google.com/*",
-    "https://mail-attachment.googleusercontent.com/*"
+    "https://mail-attachment.googleusercontent.com/*",
+    "https://mail.proton.me/*"
   ],
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
       "js": ["content-gmail.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://mail.proton.me/*"],
+      "js": ["content-protonmail.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }

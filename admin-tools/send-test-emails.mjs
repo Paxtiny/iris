@@ -12,10 +12,11 @@
 
 import nodemailer from "nodemailer";
 
-const RECIPIENTS = [
-  "clemensk77@gmail.com",
-  "paxtiny@protonmail.com",
-];
+const RECIPIENTS = (process.env.TEST_RECIPIENTS || "").split(",").filter(Boolean);
+if (RECIPIENTS.length === 0) {
+  console.error("Set TEST_RECIPIENTS env var (comma-separated emails)");
+  process.exit(1);
+}
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
