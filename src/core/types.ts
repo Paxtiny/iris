@@ -5,6 +5,8 @@ export type AuthResult = "pass" | "fail" | "none";
 export interface EmailMetadata {
   from: string;
   fromDomain: string;
+  /** Display name portion of the From header (e.g., "PayPal Support") */
+  displayName: string | null;
   replyTo: string | null;
   replyToDomain: string | null;
   returnPath: string | null;
@@ -89,6 +91,11 @@ export interface ScoringResult {
   signals: ScoringSignal[];
   /** Plain-language explanation for the user */
   explanation: string;
+}
+
+/** Result of content-level analysis (display name, links, body) */
+export interface ContentAnalysis {
+  signals: ScoringSignal[];
 }
 
 /** Supported UI languages */

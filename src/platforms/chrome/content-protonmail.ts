@@ -6,6 +6,7 @@ import { parseEmailHeaders } from "../../core/headerParser";
 import { analyzeDomains } from "../../core/domainAnalyzer";
 import { detectUrgency } from "../../core/urgencyDetector";
 import { analyzeAttachments } from "../../core/attachmentAnalyzer";
+import { analyzeContent } from "../../core/contentAnalyzer";
 import { scoreEmail } from "../../core/scorer";
 import { createResultCardElement } from "../../ui/components";
 import type { EmailMetadata, ExtractedLink, AttachmentInfo } from "../../core/types";
@@ -65,14 +66,19 @@ function extractSubject(): string {
  *  1. [title*="@"] inside [data-testid="recipients:sender"]
  *  2. Text regex inside [data-testid="recipients:sender"]
  *  3. Any [title*="@"] inside any expanded header (fallback) */
-function extractSender(): { from: string; fromDomain: string } | null {
+function extractSender(): { from: string; fromDomain: string; displayName: string | null } | null {
   // Strategy 1: title attribute on any child of the sender container
   const senderContainer = document.querySelector(SEL.recipientSender);
   if (senderContainer) {
     // ProtonMail RecipientItem renders a button/span with title="email@domain.com"
     const withTitle = senderContainer.querySelector<HTMLElement>("[title*='@']");
     const email = parseEmail(withTitle?.getAttribute("title") ?? senderContainer.textContent ?? "");
-    if (email) return email;
+    if (email) {
+      // Display name: the visible text minus the email address
+      const fullText = (senderContainer as HTMLElement).textContent?.trim() ?? "";
+      const displayName = fullText.replace(email.from, "").replace(/[<>]/g, "").trim() || null;
+      return { ...email, displayName };
+    }
   }
 
   // Strategy 2: scan first few expanded headers for any email address
@@ -82,11 +88,11 @@ function extractSender(): { from: string; fromDomain: string } | null {
     // Check title attributes first (more reliable than text)
     for (const el of header.querySelectorAll("[title*='@']")) {
       const email = parseEmail(el.getAttribute("title") ?? "");
-      if (email) return email;
+      if (email) return { ...email, displayName: null };
     }
     // Fall back to plain text scan
     const email = parseEmail(header.textContent ?? "");
-    if (email) return email;
+    if (email) return { ...email, displayName: null };
   }
 
   return null;
@@ -349,6 +355,7 @@ async function analyzeEmail(): Promise<AnalysisResponse> {
     const metadata: EmailMetadata = {
       from: sender.from,
       fromDomain: sender.fromDomain,
+      displayName: sender.displayName,
       replyTo: null,
       replyToDomain: null,
       returnPath: null,
@@ -372,7 +379,12 @@ async function analyzeEmail(): Promise<AnalysisResponse> {
     const urgencyAnalysis = detectUrgency(`${subject}\n\n${bodyText}`);
     const rawAttachments = extractAttachmentsFromDom();
     const attachmentAnalysis = analyzeAttachments(rawAttachments);
-    const result = scoreEmail(metadata, domainAnalysis, urgencyAnalysis, { skipAuth: true }, attachmentAnalysis);
+
+    // Content analysis (display name spoofing, shorteners, forms, greetings)
+    const iframe = getContentIframe();
+    const bodyHtml = iframe?.contentDocument?.body?.innerHTML ?? null;
+    const contentAnalysis = analyzeContent({ metadata, links, bodyText, bodyHtml });
+    const result = scoreEmail(metadata, domainAnalysis, urgencyAnalysis, { skipAuth: true }, attachmentAnalysis, contentAnalysis);
 
     const cardElement = createResultCardElement(result);
     // Append verify button so the popup can find and re-attach its click handler.

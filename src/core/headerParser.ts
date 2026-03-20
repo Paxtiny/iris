@@ -7,6 +7,7 @@ export function parseEmailHeaders(emlContent: string): EmailMetadata {
   return {
     from: getHeader(headers, "from") ?? "",
     fromDomain: extractDomain(getHeader(headers, "from") ?? ""),
+    displayName: extractDisplayName(getHeader(headers, "from") ?? ""),
     replyTo: getHeader(headers, "reply-to"),
     replyToDomain: extractDomain(getHeader(headers, "reply-to") ?? ""),
     returnPath: getHeader(headers, "return-path"),
@@ -111,6 +112,18 @@ export function extractDomain(value: string): string {
     .toLowerCase();
 
   return domain;
+}
+
+/** Extract display name from a From header value (e.g., "PayPal Support" from "PayPal Support <noreply@paypal.com>") */
+function extractDisplayName(value: string): string | null {
+  if (!value) return null;
+  // "Display Name <email>" format
+  const angleMatch = value.match(/^(.+?)\s*<[^>]+>/);
+  if (angleMatch?.[1]) {
+    // Strip surrounding quotes
+    return angleMatch[1].replace(/^["']|["']$/g, "").trim() || null;
+  }
+  return null;
 }
 
 /** Parse authentication result from Authentication-Results header */

@@ -6,6 +6,7 @@ import { analyzeDomains } from "../../core/domainAnalyzer";
 import { extractLinks } from "../../core/linkExtractor";
 import { detectUrgency } from "../../core/urgencyDetector";
 import { analyzeAttachments } from "../../core/attachmentAnalyzer";
+import { analyzeContent } from "../../core/contentAnalyzer";
 import { scoreEmail, type ScoreOptions } from "../../core/scorer";
 import { createResultCardElement } from "../../ui/components";
 import type { EmailMetadata, ExtractedLink } from "../../core/types";
@@ -352,8 +353,8 @@ function getDisplayedEmailContainer(): HTMLElement | null {
   return (lastMsg.closest(".adn, .aeJ, [role='main']") ?? lastMsg.parentElement) as HTMLElement | null;
 }
 
-/** Extract sender email from Gmail's rendered DOM, scoped to the displayed email */
-function extractSenderFromDom(): { from: string; fromDomain: string } | null {
+/** Extract sender email and display name from Gmail's rendered DOM, scoped to the displayed email */
+function extractSenderFromDom(): { from: string; fromDomain: string; displayName: string | null } | null {
   const container = getDisplayedEmailContainer() ?? document;
 
   // Strategy 1: .gD[email] is Gmail's specific class for the SENDER element
@@ -365,9 +366,11 @@ function extractSenderFromDom(): { from: string; fromDomain: string } | null {
     const email = span.getAttribute("email") ?? "";
     if (email.includes("@")) {
       const domain = email.split("@").pop()!.toLowerCase();
+      // Display name is the visible text content of the .gD span (the name shown to the user)
+      const displayName = (span as HTMLElement).textContent?.trim() || null;
       console.log(LOG_PREFIX, "Sender from DOM (.gD):", email, "domain:", domain,
-        `(match ${senderSpans.length}/${senderSpans.length})`);
-      return { from: email, fromDomain: domain };
+        "displayName:", displayName, `(match ${senderSpans.length}/${senderSpans.length})`);
+      return { from: email, fromDomain: domain, displayName };
     }
   }
 
@@ -382,7 +385,7 @@ function extractSenderFromDom(): { from: string; fromDomain: string } | null {
       const email = emailMatch[0];
       const domain = email.split("@").pop()!.toLowerCase();
       console.log(LOG_PREFIX, "Sender from DOM header text:", email);
-      return { from: email, fromDomain: domain };
+      return { from: email, fromDomain: domain, displayName: null };
     }
   }
 
@@ -395,7 +398,7 @@ function extractSenderFromDom(): { from: string; fromDomain: string } | null {
       // Skip the user's own email (likely the recipient)
       const domain = id.split("@").pop()!.toLowerCase();
       console.log(LOG_PREFIX, "Sender from hovercard:", id);
-      return { from: id, fromDomain: domain };
+      return { from: id, fromDomain: domain, displayName: null };
     }
   }
 
@@ -445,6 +448,18 @@ function extractLinksFromDom(): ExtractedLink[] {
 
   console.log(LOG_PREFIX, "Links from DOM:", links.length, links.map(l => l.domain));
   return links;
+}
+
+/** Extract the raw HTML from the email body in Gmail's DOM (for form detection) */
+function extractBodyHtmlFromDom(): string | null {
+  const scope = getDisplayedEmailContainer() ?? document;
+  const bodyContainers = scope.querySelectorAll(".a3s, .ii");
+  const parts: string[] = [];
+  for (const container of bodyContainers) {
+    const html = (container as HTMLElement).innerHTML;
+    if (html.trim()) parts.push(html);
+  }
+  return parts.length > 0 ? parts.join("\n") : null;
 }
 
 /** Extract the visible email body text from Gmail's DOM */
@@ -525,7 +540,8 @@ async function analyzeEmail(emailId: EmailId) {
     if (rawAttachments.length > 0) {
       console.log(LOG_PREFIX, "Attachments from EML:", rawAttachments.map((a) => a.filename));
     }
-    return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, {}, attachmentAnalysis);
+    const contentAnalysis = analyzeContent({ metadata, links, bodyText: emlContent, bodyHtml: emlContent });
+    return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, {}, attachmentAnalysis, contentAnalysis);
   }
 
   // Fallback: DOM-based analysis (no auth headers, but links/urgency/domains work)
@@ -538,6 +554,7 @@ async function analyzeEmail(emailId: EmailId) {
   const metadata: EmailMetadata = {
     from: sender.from,
     fromDomain: sender.fromDomain,
+    displayName: sender.displayName,
     replyTo: null,
     replyToDomain: null,
     returnPath: null,
@@ -570,11 +587,16 @@ async function analyzeEmail(emailId: EmailId) {
     console.log(LOG_PREFIX, "Attachments from DOM:", domAttachments.map((a) => a.filename));
   }
 
+  // Content analysis (display name spoofing, shorteners, forms, greetings)
+  const bodyHtml = extractBodyHtmlFromDom();
+  const contentAnalysis = analyzeContent({ metadata, links, bodyText, bodyHtml });
+
   console.log(LOG_PREFIX, "DOM analysis - sender:", sender.fromDomain,
-    "links:", linkDomains.length, "urgency:", urgencyAnalysis.hasUrgency);
+    "links:", linkDomains.length, "urgency:", urgencyAnalysis.hasUrgency,
+    "content signals:", contentAnalysis.signals.length);
 
   const scoreOptions: ScoreOptions = { skipAuth: true };
-  return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, scoreOptions, attachmentAnalysis);
+  return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, scoreOptions, attachmentAnalysis, contentAnalysis);
 }
 
 interface AnalysisResponse { html: string | null; subject?: string; from?: string; provider?: string }

@@ -3,6 +3,7 @@ import type {
   DomainAnalysis,
   UrgencyAnalysis,
   AttachmentAnalysis,
+  ContentAnalysis,
   ScoringResult,
   ScoringSignal,
 } from "./types";
@@ -21,6 +22,7 @@ export function scoreEmail(
   urgency: UrgencyAnalysis,
   options?: ScoreOptions,
   attachments?: AttachmentAnalysis,
+  content?: ContentAnalysis,
 ): ScoringResult {
   const signals: ScoringSignal[] = [];
   let rawScore = 0;
@@ -162,6 +164,14 @@ export function scoreEmail(
     for (const f of attachments.macroFiles) {
       signals.push({ name: "attachment_macro", points: 2, detail: `Macro-enabled Office attachment: "${f}"` });
       rawScore += 2;
+    }
+  }
+
+  // Content analysis signals (display name spoofing, shorteners, forms, etc.)
+  if (content) {
+    for (const signal of content.signals) {
+      signals.push(signal);
+      rawScore += signal.points;
     }
   }
 
