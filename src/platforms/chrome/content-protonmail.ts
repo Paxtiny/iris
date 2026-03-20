@@ -398,18 +398,12 @@ async function analyzeEmail(): Promise<AnalysisResponse> {
     const replyToEmail = extractReplyTo();
     const replyToDomain = replyToEmail ? replyToEmail.split("@").pop()!.toLowerCase() : null;
 
-    // ProtonMail shows a warning banner when auth fails - detect it from the DOM.
-    // This gives us auth status on first scan without needing the modal.
-    // Search all elements near the email header for auth failure text.
-    let authFailed = false;
-    const headerArea = document.querySelector('[data-testid="message-header"], [data-shortcut-target="message-container"]')
-      ?? document.querySelector('.message-header, [class*="message-header"]');
-    const searchArea = headerArea?.parentElement ?? document.body;
-    // ProtonMail renders: "This email has failed its domain's authentication requirements"
-    const allText = searchArea.textContent ?? "";
-    if (/failed.*authentication|authentication.*fail|may be spoofed|improperly forwarded/i.test(allText)) {
-      authFailed = true;
-    }
+    // ProtonMail shows warning banners for auth failures and phishing detection.
+    // Use the exact data-testid selectors from ProtonMail's open-source codebase
+    // (ExtraSpamScore.tsx) for reliable detection without text matching.
+    const dmarcBanner = document.querySelector('[data-testid="spam-banner:dmarc-validation-failure"]');
+    const phishingBanner = document.querySelector('[data-testid="spam-banner:phishing-banner"]');
+    const authFailed = !!dmarcBanner || !!phishingBanner;
 
     if (authFailed) {
       console.log(LOG_PREFIX, "Auth failure banner detected in DOM");
@@ -450,20 +444,27 @@ async function analyzeEmail(): Promise<AnalysisResponse> {
     const contentAnalysis = analyzeContent({ metadata, links, bodyText, bodyHtml });
     let result = scoreEmail(metadata, domainAnalysis, urgencyAnalysis, { skipAuth: true }, attachmentAnalysis, contentAnalysis);
 
-    // If ProtonMail shows an auth failure banner, inject a single high-weight signal.
+    // If ProtonMail shows an auth/phishing banner, inject a high-weight signal.
     // This is a floor: Verify can only add detail, never reduce the score.
     if (authFailed) {
+      const isPhishing = !!phishingBanner;
+      const bonus = isPhishing ? 7 : 5;
       const authSignal = {
-        name: "protonmail_auth_banner",
-        points: 5,
-        detail: "Email failed authentication (detected by Proton Mail)",
+        name: isPhishing ? "protonmail_phishing_banner" : "protonmail_auth_banner",
+        points: bonus,
+        detail: isPhishing
+          ? "Proton Mail flagged this as a phishing attempt"
+          : "Email failed authentication (detected by Proton Mail)",
       };
+      const newScore = Math.min(10, result.score + bonus);
       result = {
         ...result,
-        score: Math.min(10, result.score + 5),
-        level: Math.min(10, result.score + 5) > 5 ? "dangerous" as const : Math.min(10, result.score + 5) > 2 ? "uncertain" as const : "safe" as const,
+        score: newScore,
+        level: newScore > 5 ? "dangerous" as const : newScore > 2 ? "uncertain" as const : "safe" as const,
         signals: [...result.signals, authSignal],
-        explanation: "Email authentication failed - the sender may not be who they claim.",
+        explanation: isPhishing
+          ? "Proton Mail's automated system flagged this as a phishing attempt."
+          : "Email authentication failed - the sender may not be who they claim.",
       };
     }
 
