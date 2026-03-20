@@ -98,6 +98,36 @@ function extractSender(): { from: string; fromDomain: string; displayName: strin
   return null;
 }
 
+/** Extract reply-to email from ProtonMail's header, if present.
+ *  ProtonMail uses data-testid attributes for header sections. */
+function extractReplyTo(): string | null {
+  // Strategy 1: explicit reply-to test ID
+  const replyToEl = document.querySelector('[data-testid="recipients:reply-to"]');
+  if (replyToEl) {
+    const titleEl = replyToEl.querySelector<HTMLElement>("[title*='@']");
+    const email = titleEl?.getAttribute("title") ?? replyToEl.textContent ?? "";
+    const match = email.match(/[\w.+%-]+@[\w.-]+\.[a-z]{2,}/i);
+    if (match) {
+      console.log(LOG_PREFIX, "Reply-to from data-testid:", match[0]);
+      return match[0].toLowerCase();
+    }
+  }
+
+  // Strategy 2: scan expanded headers for "Reply to:" label
+  for (let i = 0; i < 5; i++) {
+    const header = document.querySelector(SEL.expandedHeader(i));
+    if (!header) continue;
+    const text = header.textContent ?? "";
+    const replyMatch = text.match(/reply[- ]?to:\s*([\w.+%-]+@[\w.-]+\.[a-z]{2,})/i);
+    if (replyMatch) {
+      console.log(LOG_PREFIX, "Reply-to from header text:", replyMatch[1]);
+      return replyMatch[1]!.toLowerCase();
+    }
+  }
+
+  return null;
+}
+
 /** Parse first valid email address out of a string. Returns null if none found. */
 function parseEmail(text: string): { from: string; fromDomain: string } | null {
   const match = text.match(/[\w.+%-]+@[\w.-]+\.[a-z]{2,}/i);
@@ -352,12 +382,15 @@ async function analyzeEmail(): Promise<AnalysisResponse> {
       return { html: createInfoHtml("This is your own reply. Scroll to the original inbound email in the thread and scan that message.") };
     }
 
+    const replyToEmail = extractReplyTo();
+    const replyToDomain = replyToEmail ? replyToEmail.split("@").pop()!.toLowerCase() : null;
+
     const metadata: EmailMetadata = {
       from: sender.from,
       fromDomain: sender.fromDomain,
       displayName: sender.displayName,
-      replyTo: null,
-      replyToDomain: null,
+      replyTo: replyToEmail,
+      replyToDomain,
       returnPath: null,
       returnPathDomain: null,
       messageId: null,

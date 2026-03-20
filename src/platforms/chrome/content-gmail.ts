@@ -405,6 +405,44 @@ function extractSenderFromDom(): { from: string; fromDomain: string; displayName
   return null;
 }
 
+/** Extract reply-to email from Gmail's expanded header, if visible.
+ *  Gmail shows "reply-to:" in the .go detail table when it differs from the sender.
+ *  Only visible when the user has clicked to expand the header (or Gmail auto-expands it). */
+function extractReplyToFromDom(): string | null {
+  const container = getDisplayedEmailContainer() ?? document;
+
+  // Strategy 1: Gmail's expanded header detail table (.go) contains "reply-to:" rows
+  // The .ajy class labels the header name, the next cell has the value
+  for (const cell of container.querySelectorAll<HTMLElement>(".ajy, td")) {
+    const label = cell.textContent?.trim().toLowerCase() ?? "";
+    if (label === "reply-to:" || label === "reply to:") {
+      const valueCell = cell.nextElementSibling as HTMLElement | null;
+      if (valueCell) {
+        // Try email attribute first, then text content
+        const emailEl = valueCell.querySelector<HTMLElement>("[email]");
+        const email = emailEl?.getAttribute("email") ?? valueCell.textContent?.trim() ?? "";
+        const match = email.match(/[\w.+-]+@[\w.-]+\.\w{2,}/i);
+        if (match) {
+          console.log(LOG_PREFIX, "Reply-to from DOM:", match[0]);
+          return match[0].toLowerCase();
+        }
+      }
+    }
+  }
+
+  // Strategy 2: Scan .go containers for "reply-to:" text with email
+  for (const go of container.querySelectorAll<HTMLElement>(".go, .gE")) {
+    const text = go.textContent ?? "";
+    const replyMatch = text.match(/reply[- ]?to:\s*([\w.+-]+@[\w.-]+\.\w{2,})/i);
+    if (replyMatch) {
+      console.log(LOG_PREFIX, "Reply-to from header text:", replyMatch[1]);
+      return replyMatch[1]!.toLowerCase();
+    }
+  }
+
+  return null;
+}
+
 /** Extract links from the visible email body in Gmail's DOM */
 function extractLinksFromDom(): ExtractedLink[] {
   const links: ExtractedLink[] = [];
@@ -551,12 +589,15 @@ async function analyzeEmail(emailId: EmailId) {
     throw new Error("Could not identify the sender. Try opening the email in full view.");
   }
 
+  const replyToEmail = extractReplyToFromDom();
+  const replyToDomain = replyToEmail ? replyToEmail.split("@").pop()!.toLowerCase() : null;
+
   const metadata: EmailMetadata = {
     from: sender.from,
     fromDomain: sender.fromDomain,
     displayName: sender.displayName,
-    replyTo: null,
-    replyToDomain: null,
+    replyTo: replyToEmail,
+    replyToDomain,
     returnPath: null,
     returnPathDomain: null,
     messageId: null,
