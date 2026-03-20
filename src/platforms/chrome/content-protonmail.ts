@@ -377,7 +377,7 @@ async function analyzeEmail(): Promise<AnalysisResponse> {
     const cardElement = createResultCardElement(result);
     // Append verify button so the popup can find and re-attach its click handler.
     addVerifyButton(cardElement);
-    return { html: cardElement.outerHTML, subject, from: sender.from };
+    return { html: cardElement.outerHTML, subject, from: sender.from, provider: "protonmail" };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(LOG_PREFIX, "Analysis error:", err);

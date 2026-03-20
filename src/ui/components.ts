@@ -1,9 +1,32 @@
 import type { ScoringResult } from "../core/types";
 
+/** SVG ring score badge - arc fills based on score (0-10) */
+function createScoreRingSvg(score: number, level: "safe" | "uncertain" | "dangerous"): string {
+  const colors = {
+    safe: { ring: "#10b981", glow: "rgba(16,185,129,0.3)" },
+    uncertain: { ring: "#f59e0b", glow: "rgba(245,158,11,0.3)" },
+    dangerous: { ring: "#ef4444", glow: "rgba(239,68,68,0.3)" },
+  };
+  const { ring, glow } = colors[level];
+  const radius = 17;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(score / 10, 1);
+  const dashOffset = circumference * (1 - progress);
+
+  return `<svg class="iris-score-ring" width="44" height="44" viewBox="0 0 44 44">
+    <circle cx="22" cy="22" r="${radius}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2.5"/>
+    <circle cx="22" cy="22" r="${radius}" fill="none" stroke="${ring}" stroke-width="2.5"
+      stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"
+      stroke-linecap="round" transform="rotate(-90 22 22)"
+      style="filter: drop-shadow(0 0 4px ${glow}); transition: stroke-dashoffset 0.6s ease;"/>
+    <text x="22" y="22" text-anchor="middle" dominant-baseline="central"
+      fill="${ring}" font-size="16" font-weight="700" font-family="Inter, system-ui, sans-serif">${score}</text>
+  </svg>`;
+}
+
 /** Create the result card as a DOM element (avoids inline event handlers blocked by CSP) */
 export function createResultCardElement(result: ScoringResult): HTMLElement {
   const levelClass = `iris-card-${result.level}`;
-  const scoreClass = `iris-score-${result.level}`;
 
   const levelLabels = {
     safe: "Very likely legitimate",
@@ -20,18 +43,25 @@ export function createResultCardElement(result: ScoringResult): HTMLElement {
   levelLabel.textContent = "Threat Level";
   card.appendChild(levelLabel);
 
-  // Header with score badge
+  // Header with title and SVG ring badge
   const header = document.createElement("div");
   header.className = "iris-card-header";
   const title = document.createElement("span");
   title.className = "iris-card-title";
   title.textContent = levelLabels[result.level];
-  const badge = document.createElement("span");
-  badge.className = `iris-score-badge ${scoreClass}`;
-  badge.textContent = String(result.score);
   header.appendChild(title);
-  header.appendChild(badge);
+  const badgeWrapper = document.createElement("span");
+  badgeWrapper.innerHTML = createScoreRingSvg(result.score, result.level);
+  header.appendChild(badgeWrapper);
   card.appendChild(header);
+
+  // "Verified Sender" chip for safe results with score 0
+  if (result.level === "safe" && result.score === 0) {
+    const chip = document.createElement("div");
+    chip.className = "iris-verified-chip";
+    chip.innerHTML = `<span class="iris-verified-icon">\u2714</span> Verified Sender`;
+    card.appendChild(chip);
+  }
 
   // Explanation
   const explanation = document.createElement("div");
@@ -79,13 +109,16 @@ export function createResultCardElement(result: ScoringResult): HTMLElement {
 /** Render the result card as an HTML string (for popup / non-Gmail contexts) */
 export function renderResultCard(result: ScoringResult): string {
   const levelClass = `iris-card-${result.level}`;
-  const scoreClass = `iris-score-${result.level}`;
 
   const levelLabels = {
     safe: "Very likely legitimate",
     uncertain: "Review carefully",
     dangerous: "Very likely phishing",
   };
+
+  const verifiedChip = result.level === "safe" && result.score === 0
+    ? `<div class="iris-verified-chip"><span class="iris-verified-icon">\u2714</span> Verified Sender</div>`
+    : "";
 
   const signalsHtml =
     result.signals.length > 0
@@ -103,8 +136,9 @@ export function renderResultCard(result: ScoringResult): string {
       <div class="iris-card-level-label">Threat Level</div>
       <div class="iris-card-header">
         <span class="iris-card-title">${levelLabels[result.level]}</span>
-        <span class="iris-score-badge ${scoreClass}">${result.score}</span>
+        ${createScoreRingSvg(result.score, result.level)}
       </div>
+      ${verifiedChip}
       <div class="iris-card-explanation">${escapeHtml(result.explanation)}</div>
       ${signalsHtml}
       <div class="iris-card-footer">Checked by nicodAImus iris</div>

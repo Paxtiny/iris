@@ -83,8 +83,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (metaDiv) {
           const subject = response.subject?.trim();
           const from = response.from?.trim();
+          const provider = response.provider as string | undefined;
           if (subject || from) {
             let html = "";
+            // Mail provider chip
+            if (provider) {
+              const providerLabel = provider === "protonmail" ? "Proton Mail" : "Gmail";
+              html += `<span class="iris-provider-chip iris-provider-${provider}">${providerLabel}</span>`;
+            }
             if (subject) {
               html += `<span class="iris-meta-label">Subject</span>`
                     + `<span class="iris-meta-value" title="${esc(subject)}">${esc(subject)}</span>`;

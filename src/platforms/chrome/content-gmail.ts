@@ -577,7 +577,7 @@ async function analyzeEmail(emailId: EmailId) {
   return scoreEmail(metadata, domainAnalysis, urgencyAnalysis, scoreOptions, attachmentAnalysis);
 }
 
-interface AnalysisResponse { html: string | null; subject?: string; from?: string }
+interface AnalysisResponse { html: string | null; subject?: string; from?: string; provider?: string }
 
 /** Handle the check trigger - returns HTML + metadata for the popup to display. */
 async function handleCheck(): Promise<AnalysisResponse> {
@@ -606,7 +606,7 @@ async function handleCheck(): Promise<AnalysisResponse> {
       ?? document.querySelector<HTMLElement>("[role='main'] .hP, .nH .hP, .aeF .hP"))?.innerText?.trim() ?? "";
     const from = (container.querySelector<HTMLElement>(".gD[email]")
       ?? document.querySelector<HTMLElement>(".gD[email]"))?.getAttribute("email") ?? "";
-    return { html, subject, from };
+    return { html, subject, from, provider: "gmail" };
   } catch (err: unknown) {
     const message = err instanceof Error
       ? err.message

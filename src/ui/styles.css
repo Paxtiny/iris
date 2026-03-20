@@ -96,38 +96,56 @@
   flex-shrink: 0;
 }
 
-/* Score badge - hollow glass style with colored glow */
-.iris-score-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  font-size: 18px;
-  font-weight: 700;
+/* Score ring (SVG) */
+.iris-score-ring {
   flex-shrink: 0;
 }
 
-.iris-score-safe {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+/* Verified Sender chip */
+.iris-verified-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--success);
-  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 20px;
 }
 
-.iris-score-uncertain {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: var(--warning);
-  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4));
+.iris-verified-icon {
+  font-size: 12px;
 }
 
-.iris-score-dangerous {
-  background: rgba(147, 0, 10, 0.4);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ffb4ab;
-  filter: drop-shadow(0 0 8px rgba(255, 180, 171, 0.4));
+/* Mail provider chip */
+.iris-provider-chip {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.iris-provider-gmail {
+  color: #ea4335;
+  background: rgba(234, 67, 53, 0.08);
+  border: 1px solid rgba(234, 67, 53, 0.2);
+}
+
+.iris-provider-protonmail {
+  color: #6d4aff;
+  background: rgba(109, 74, 255, 0.08);
+  border: 1px solid rgba(109, 74, 255, 0.2);
 }
 
 /* Card layout */
