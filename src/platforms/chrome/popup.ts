@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     checkBtn!.classList.remove("iris-scanning");
-    checkBtn!.textContent = "Scan Again";
+    checkBtn!.textContent = "Scan";
     checkBtn!.removeAttribute("disabled");
   }
 
